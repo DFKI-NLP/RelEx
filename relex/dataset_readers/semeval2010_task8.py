@@ -80,16 +80,16 @@ class SemEval2010Task8DatasetReader(DatasetReader):
 
                 yield self.text_to_instance(text, head, tail, id_, relation)
 
-    def _add_offset_to_tokens(self, tokens, span, attr):
-        start, end = span
-        for i, token in enumerate(tokens):
-            offset = 0
-            if i > end:
-                offset = i - end
-            elif i < start:
-                offset = i - start
+    # def _add_offset_to_tokens(self, tokens, span, attr):
+    #     start, end = span
+    #     for i, token in enumerate(tokens):
+    #         offset = 0
+    #         if i > end:
+    #             offset = i - end
+    #         elif i < start:
+    #             offset = i - start
 
-            setattr(token, attr, self._max_len + offset)
+    #         setattr(token, attr, 1 + self._max_len + offset)
 
     @overrides
     def text_to_instance(
@@ -105,8 +105,8 @@ class SemEval2010Task8DatasetReader(DatasetReader):
         tokenized_text = self._tokenizer.tokenize(text)
         tokenized_text = tokenized_text[: self._max_len]
 
-        self._add_offset_to_tokens(tokenized_text, head, attr="offset_head")
-        self._add_offset_to_tokens(tokenized_text, tail, attr="offset_tail")
+        # self._add_offset_to_tokens(tokenized_text, head, attr="offset_head")
+        # self._add_offset_to_tokens(tokenized_text, tail, attr="offset_tail")
 
         text_tokens_field = TextField(tokenized_text, self._token_indexers)
         fields = {

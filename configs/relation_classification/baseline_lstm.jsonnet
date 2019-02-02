@@ -1,4 +1,9 @@
 {
+  local max_len = 200,
+  local embedding_dim = 300,
+  local offset_embedding_dim = 25,
+  local text_encoder_input_dim = embedding_dim + 2 * offset_embedding_dim,
+
   "dataset_reader": {
     "type": "semeval2010_task8",
     "max_len": 200,
@@ -6,14 +11,6 @@
       "tokens": {
         "type": "single_id",
         "lowercase_tokens": true
-      },
-      "offset_head": {
-        "type": "offset",
-        "token_attribute": "offset_head"
-      },
-      "offset_tail": {
-        "type": "offset",
-        "token_attribute": "offset_tail"
       },
     },
   },
@@ -27,24 +24,24 @@
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-        "embedding_dim": 50,
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+        "embedding_dim": embedding_dim,
         "trainable": false
       },
-      "offset_head": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": true
-      },
-      "offset_tail": {
-        "type": "embedding",
-        "embedding_dim": 25,
-        "trainable": true
-      },
+    },
+    "offset_embedder_head": {
+      "type": "relative",
+      "n_position": max_len,
+      "embedding_dim": offset_embedding_dim
+    },
+    "offset_embedder_tail": {
+      "type": "relative",
+      "n_position": max_len,
+      "embedding_dim": offset_embedding_dim
     },
     "text_encoder": {
       "type": "lstm",
-      "input_size": 100,
+      "input_size": text_encoder_input_dim,
       "hidden_size": 100,
       "bidirectional": true,
       "num_layers": 2,

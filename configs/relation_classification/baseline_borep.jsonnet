@@ -6,7 +6,7 @@
 
   "dataset_reader": {
     "type": "semeval2010_task8",
-    "max_len": max_len,
+    "max_len": 200,
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -40,18 +40,20 @@
       "embedding_dim": offset_embedding_dim
     },
     "text_encoder": {
-      "type": "cnn",
+      "type": "bag_of_random_embedding_projections",
       "embedding_dim": text_encoder_input_dim,
-      "num_filters": 50,
-      "ngram_filter_sizes": [2,3,4,5]
+      "projection_dim": 4096
     },
     "classifier_feedforward": {
-      "input_dim": 200,
-      "num_layers": 2,
-      "hidden_dims": [200, 19],
-      "activations": ["relu", "linear"],
-      "dropout": [0.5, 0.0]
+      "input_dim": 4096,
+      "num_layers": 1,
+      "hidden_dims": [19],
+      "activations": ["linear"],
+      "dropout": [0.0]
     },
+    "initializer": [
+      ["text_encoder._projection.bias", {"type": "constant", "val": 0}],
+    ],
   },
 
   "iterator": {
@@ -70,6 +72,9 @@
     "optimizer": {
       "type": "adam",
       "lr": 1e-3
-    }
+    },
+    "no_grad": [
+      "text_encoder._projection.*"
+    ],
   }
 }

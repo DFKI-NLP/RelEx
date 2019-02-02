@@ -5,25 +5,25 @@ from overrides import overrides
 import torch
 import torch.nn.functional as F
 
-from allennlp.common import Params
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import FeedForward, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
-from allennlp.training.metrics import CategoricalAccuracy
 from relex.metrics import F1Measure
+from relex.modules.offset_embedders import OffsetEmbedder
 
 
 @Model.register("basic_relation_classifier")
 class BasicRelationClassifier(Model):
     """
     This ``Model`` performs relation classification on a given input. 
-    We assume we're given a text, head and tail entity offsets, and we predict the relation between head and tail entity.
-    The basic model structure: we'll embed the text, relative head and tail offsets, and encode it with a Seq2VecEncoder, getting a 
-    single vector representing the content.  We'll then pass the result through a feedforward network,
-    the output of which we'll use as our scores for each label.
+    We assume we're given a text, head and tail entity offsets, and we predict the 
+    relation between head and tail entity. The basic model structure: we'll embed the 
+    text, relative head and tail offsets, and encode it with a Seq2VecEncoder, getting a 
+    single vector representing the content.  We'll then pass the result through a 
+    feedforward network, the output of which we'll use as our scores for each label.
     Parameters
     ----------
     vocab : ``Vocabulary``, required
@@ -35,6 +35,10 @@ class BasicRelationClassifier(Model):
     classifier_feedforward : ``FeedForward``
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
+    offset_embedder_head : ``OffsetEmbedder``
+        The embedder we use to embed each tokens relative offset to the head entity.
+    offset_embedder_tail : ``OffsetEmbedder``
+        The embedder we use to embed each tokens relative offset to the tail entity.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
     """
@@ -45,6 +49,8 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
+        offset_embedder_head: Optional[OffsetEmbedder] = None,
+        offset_embedder_tail: Optional[OffsetEmbedder] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         regularizer: Optional[RegularizerApplicator] = None,
         verbose_metrics: bool = False,
@@ -55,12 +61,23 @@ class BasicRelationClassifier(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
         self.classifier_feedforward = classifier_feedforward
+        self.offset_embedder_head = offset_embedder_head
+        self.offset_embedder_tail = offset_embedder_tail
         self._verbose_metrics = verbose_metrics
 
-        if text_field_embedder.get_output_dim() != text_encoder.get_input_dim():
+        offset_embedding_dim = 0
+        if offset_embedder_head is not None:
+            offset_embedding_dim += offset_embedder_head.get_output_dim()
+
+        if offset_embedder_tail is not None:
+            offset_embedding_dim += offset_embedder_tail.get_output_dim()
+
+        if (
+            text_field_embedder.get_output_dim() + offset_embedding_dim
+        ) != text_encoder.get_input_dim():
             raise ConfigurationError(
-                "The output dimension of the text_field_embedder must match the "
-                "input dimension of the text_encoder. Found {} and {}, "
+                "The output dimension of the text_field_embedder and offset_embedders "
+                "must match the input dimension of the text_encoder. Found {} and {}, "
                 "respectively.".format(
                     text_field_embedder.get_output_dim(), text_encoder.get_input_dim()
                 )
@@ -119,6 +136,15 @@ class BasicRelationClassifier(Model):
         """
         embedded_text = self.text_field_embedder(text)
         text_mask = util.get_text_field_mask(text)
+
+        embeddings = [embedded_text]
+        if self.offset_embedder_head is not None:
+            embeddings.append(self.offset_embedder_head(embedded_text, span=head))
+        if self.offset_embedder_tail is not None:
+            embeddings.append(self.offset_embedder_tail(embedded_text, span=tail))
+
+        embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
+
         encoded_text = self.text_encoder(embedded_text, text_mask)
 
         logits = self.classifier_feedforward(encoded_text)
