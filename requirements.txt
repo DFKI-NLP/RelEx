@@ -1,0 +1,5 @@
+# Project dependencies
+allennlp
+
+# Testing
+pytest
