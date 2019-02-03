@@ -1,5 +1,5 @@
 function (embedding_dim = 300,
-          use_offset_embeddings = true, offset_embedding_dim = 50, freeze_offset_embeddings = false,
+          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 50, freeze_offset_embeddings = true,
           max_len = 200) {
   
   local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
@@ -30,12 +30,12 @@ function (embedding_dim = 300,
       },
     },
     [if use_offset_embeddings then "offset_embedder_head"]: {
-      "type": "relative",
+      "type": offset_type,
       "n_position": max_len,
       "embedding_dim": offset_embedding_dim,
     },
     [if use_offset_embeddings then "offset_embedder_tail"]: {
-      "type": "relative",
+      "type": offset_type,
       "n_position": max_len,
       "embedding_dim": offset_embedding_dim,
     },
@@ -69,7 +69,7 @@ function (embedding_dim = 300,
   },
 
   "trainer": {
-    "num_epochs": 50,
+    "num_epochs": 200,
     "patience": 10,
     "cuda_device": 0,
     "num_serialized_models_to_keep": 1,
@@ -77,7 +77,7 @@ function (embedding_dim = 300,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
       "type": "adam",
-      "lr": 5e-3
+      "lr": 1e-3
     },
     "no_grad": [
       "text_encoder.*",

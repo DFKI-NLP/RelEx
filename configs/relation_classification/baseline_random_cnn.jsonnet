@@ -1,5 +1,5 @@
 function (embedding_dim = 300,
-          use_offset_embeddings = true, offset_embedding_dim = 50, freeze_offset_embeddings = false,
+          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 50, freeze_offset_embeddings = true,
           max_len = 200) {
   
   local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
@@ -30,12 +30,12 @@ function (embedding_dim = 300,
       },
     },
     [if use_offset_embeddings then "offset_embedder_head"]: {
-      "type": "relative",
+      "type": offset_type,
       "n_position": max_len,
       "embedding_dim": offset_embedding_dim,
     },
     [if use_offset_embeddings then "offset_embedder_tail"]: {
-      "type": "relative",
+      "type": offset_type,
       "n_position": max_len,
       "embedding_dim": offset_embedding_dim,
     },
