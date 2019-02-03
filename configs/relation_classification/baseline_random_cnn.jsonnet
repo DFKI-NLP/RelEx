@@ -1,12 +1,12 @@
 {
   local max_len = 200,
-  local embedding_dim = 50,
-  local offset_embedding_dim = 25,
+  local embedding_dim = 300,
+  local offset_embedding_dim = 50,
   local text_encoder_input_dim = embedding_dim + 2 * offset_embedding_dim,
 
   "dataset_reader": {
     "type": "semeval2010_task8",
-    "max_len": 200,
+    "max_len": max_len,
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -24,7 +24,7 @@
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": false
       },
@@ -40,9 +40,10 @@
       "embedding_dim": offset_embedding_dim
     },
     "text_encoder": {
-      "type": "bag_of_random_embedding_projections",
+      "type": "cnn",
       "embedding_dim": text_encoder_input_dim,
-      "projection_dim": 4096
+      "num_filters": 1024,
+      "ngram_filter_sizes": [2,3,4,5]
     },
     "classifier_feedforward": {
       "input_dim": 4096,
@@ -52,14 +53,14 @@
       "dropout": [0.0]
     },
     "initializer": [
-      ["text_encoder._projection.bias", {"type": "constant", "val": 0}],
+      ["text_encoder.conv_layer_.*.weight.*", "kaiming_uniform"],
     ],
   },
 
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["text", "num_tokens"]],
-    "batch_size": 16
+    "batch_size": 64
   },
 
   "trainer": {
@@ -74,7 +75,7 @@
       "lr": 1e-3
     },
     "no_grad": [
-      "text_encoder._projection.*",
+      "text_encoder.*",
       "offset_embedder.*"
     ],
   }
