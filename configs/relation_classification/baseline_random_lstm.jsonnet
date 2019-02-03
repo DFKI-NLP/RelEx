@@ -1,8 +1,8 @@
-{
-  local max_len = 200,
-  local embedding_dim = 300,
-  local offset_embedding_dim = 50,
-  local text_encoder_input_dim = embedding_dim + 2 * offset_embedding_dim,
+function (embedding_dim = 300,
+          use_offset_embeddings = true, offset_embedding_dim = 50, freeze_offset_embeddings = false,
+          max_len = 200) {
+  
+  local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
 
   "dataset_reader": {
     "type": "semeval2010_task8",
@@ -29,15 +29,15 @@
         "trainable": false
       },
     },
-    "offset_embedder_head": {
+    [if use_offset_embeddings then "offset_embedder_head"]: {
       "type": "relative",
       "n_position": max_len,
-      "embedding_dim": offset_embedding_dim
+      "embedding_dim": offset_embedding_dim,
     },
-    "offset_embedder_tail": {
+    [if use_offset_embeddings then "offset_embedder_tail"]: {
       "type": "relative",
       "n_position": max_len,
-      "embedding_dim": offset_embedding_dim
+      "embedding_dim": offset_embedding_dim,
     },
     "text_encoder": {
       "type": "seq2seq_pool",
@@ -81,7 +81,6 @@
     },
     "no_grad": [
       "text_encoder.*",
-      "offset_embedder.*"
-    ],
+    ] + (if freeze_offset_embeddings then ["offset_embedder.*"] else []),
   }
 }

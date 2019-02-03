@@ -1,8 +1,8 @@
-{
-  local max_len = 200,
-  local embedding_dim = 50,
-  local offset_embedding_dim = 25,
-  local text_encoder_input_dim = embedding_dim + 2 * offset_embedding_dim,
+function (embedding_dim = 300,
+          use_offset_embeddings = true, offset_embedding_dim = 50, freeze_offset_embeddings = false,
+          max_len = 200) {
+  
+  local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
 
   "dataset_reader": {
     "type": "semeval2010_task8",
@@ -24,20 +24,20 @@
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": false
       },
     },
-    "offset_embedder_head": {
+    [if use_offset_embeddings then "offset_embedder_head"]: {
       "type": "relative",
       "n_position": max_len,
-      "embedding_dim": offset_embedding_dim
+      "embedding_dim": offset_embedding_dim,
     },
-    "offset_embedder_tail": {
+    [if use_offset_embeddings then "offset_embedder_tail"]: {
       "type": "relative",
       "n_position": max_len,
-      "embedding_dim": offset_embedding_dim
+      "embedding_dim": offset_embedding_dim,
     },
     "text_encoder": {
       "type": "bag_of_random_embedding_projections",
@@ -74,8 +74,7 @@
       "lr": 1e-3
     },
     "no_grad": [
-      "text_encoder._projection.*",
-      "offset_embedder.*"
-    ],
+      "text_encoder.*",
+    ] + (if freeze_offset_embeddings then ["offset_embedder.*"] else []),
   }
 }
