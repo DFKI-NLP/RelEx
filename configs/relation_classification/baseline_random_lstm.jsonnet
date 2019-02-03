@@ -1,8 +1,8 @@
 function (embedding_dim = 300,
-          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 50, freeze_offset_embeddings = true,
+          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 300, freeze_offset_embeddings = true,
           max_len = 200) {
   
-  local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
+  local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings && (offset_type != "sine") then 2 * offset_embedding_dim else 0),
 
   "dataset_reader": {
     "type": "semeval2010_task8",

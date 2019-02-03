@@ -1,8 +1,9 @@
-function (embedding_dim = 300,
-          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 50, freeze_offset_embeddings = true,
+function (embedding_dim = 300, use_embedding_projection = true, embedding_projection_dim = 1024,
+          use_offset_embeddings = true, offset_type = "sine", offset_embedding_dim = 300, freeze_offset_embeddings = true,
           max_len = 200) {
   
-  local text_encoder_input_dim = embedding_dim + (if use_offset_embeddings then 2 * offset_embedding_dim else 0),
+  local unprojected_embedding_dim = embedding_dim + (if use_offset_embeddings && (offset_type != "sine") then 2 * offset_embedding_dim else 0),
+  local text_encoder_input_dim = if use_embedding_projection then embedding_projection_dim else unprojected_embedding_dim,
 
   "dataset_reader": {
     "type": "semeval2010_task8",
@@ -20,6 +21,7 @@ function (embedding_dim = 300,
 
   "model": {
     "type": "basic_relation_classifier",
+    [if use_embedding_projection then "embedding_projection_dim"]: embedding_projection_dim,
     "verbose_metrics": false,
     "text_field_embedder": {
       "tokens": {
@@ -64,7 +66,7 @@ function (embedding_dim = 300,
   },
 
   "trainer": {
-    "num_epochs": 50,
+    "num_epochs": 200,
     "patience": 10,
     "cuda_device": 0,
     "num_serialized_models_to_keep": 1,
@@ -72,10 +74,11 @@ function (embedding_dim = 300,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
       "type": "adam",
-      "lr": 1e-3,
+      "lr": 5e-4,
     },
     "no_grad": [
       "text_encoder.*",
-    ] + (if freeze_offset_embeddings then ["offset_embedder.*"] else []),
+    ] + (if freeze_offset_embeddings then ["offset_embedder.*"] else []) 
+      +  (if use_embedding_projection then [".*embedding_projection"] else []),
   }
 }

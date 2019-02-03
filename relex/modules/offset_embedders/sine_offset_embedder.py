@@ -42,6 +42,9 @@ class SineOffsetEmbedder(OffsetEmbedder):
     def get_output_dim(self) -> int:
         return self._embedding_dim
 
+    def is_additive(self) -> bool:
+        return True
+
     def forward(self, inputs: torch.Tensor, span: torch.Tensor) -> torch.Tensor:
         # input-> [B x seq_len x d], offset -> [B x 2]
         batch_size, seq_len, _ = inputs.size()

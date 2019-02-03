@@ -49,6 +49,7 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
+        embedding_projection_dim: Optional[int] = None,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
         offset_embedder_tail: Optional[OffsetEmbedder] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
@@ -61,20 +62,32 @@ class BasicRelationClassifier(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
         self.classifier_feedforward = classifier_feedforward
+        self._embedding_projection_dim = embedding_projection_dim
         self.offset_embedder_head = offset_embedder_head
         self.offset_embedder_tail = offset_embedder_tail
         self._verbose_metrics = verbose_metrics
 
         offset_embedding_dim = 0
         if offset_embedder_head is not None:
-            offset_embedding_dim += offset_embedder_head.get_output_dim()
+            if not offset_embedder_head.is_additive():
+                offset_embedding_dim += offset_embedder_head.get_output_dim()
 
         if offset_embedder_tail is not None:
-            offset_embedding_dim += offset_embedder_tail.get_output_dim()
+            if not offset_embedder_tail.is_additive():
+                offset_embedding_dim += offset_embedder_tail.get_output_dim()
 
-        if (
+        text_encoder_input_dim = (
             text_field_embedder.get_output_dim() + offset_embedding_dim
-        ) != text_encoder.get_input_dim():
+        )
+
+        if embedding_projection_dim is not None:
+            self._embedding_projection = torch.nn.Linear(
+                text_field_embedder.get_output_dim() + offset_embedding_dim,
+                embedding_projection_dim,
+            )
+            text_encoder_input_dim = embedding_projection_dim
+
+        if text_encoder_input_dim != text_encoder.get_input_dim():
             raise ConfigurationError(
                 "The output dimension of the text_field_embedder and offset_embedders "
                 "must match the input dimension of the text_encoder. Found {} and {}, "
@@ -143,7 +156,15 @@ class BasicRelationClassifier(Model):
         if self.offset_embedder_tail is not None:
             embeddings.append(self.offset_embedder_tail(embedded_text, span=tail))
 
-        embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
+        if self.offset_embedder_head.is_additive():
+            embedded_text = embeddings[0]
+            for e in embeddings[1:]:
+                embedded_text = embedded_text + e
+        else:
+            embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
+
+        if self._embedding_projection_dim:
+            embedded_text = self._embedding_projection(embedded_text)
 
         encoded_text = self.text_encoder(embedded_text, text_mask)
 
