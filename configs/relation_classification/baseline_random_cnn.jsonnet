@@ -79,6 +79,6 @@ function (embedding_dim = 300, use_embedding_projection = true, embedding_projec
     "no_grad": [
       "text_encoder.*",
     ] + (if freeze_offset_embeddings then ["offset_embedder.*"] else []) 
-      +  (if use_embedding_projection then [".*embedding_projection"] else []),
+      + (if use_embedding_projection then [".*embedding_projection"] else []),
   }
 }

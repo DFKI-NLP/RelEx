@@ -16,7 +16,7 @@ function (embedding_dim = 300,
   },
   
   "train_data_path": "../relex-data/semeval_2010_task_8/train.jsonl",
-  "validation_data_path": "../relex-data/semeval_2010_task_8/dev.jsonl",,
+  "validation_data_path": "../relex-data/semeval_2010_task_8/dev.jsonl",
 
   "model": {
     "type": "basic_relation_classifier",

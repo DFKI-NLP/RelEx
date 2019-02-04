@@ -7,6 +7,8 @@ def main():
             model_dir="/home/christoph/experiment_results/relex/basic_test/",
             test_file="../rexplained/data/semeval_2010_task_8/test.jsonl",
             eval_script_file="../lm-transformer-re/analysis/semeval/semeval2010_task8_scorer-v1.2.pl",
+            batch_size=128,
+            cuda_device=0,
         )
     )
 

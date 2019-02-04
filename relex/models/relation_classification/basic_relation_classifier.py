@@ -11,8 +11,9 @@ from allennlp.modules import FeedForward, Seq2VecEncoder, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
-from relex.metrics import F1Measure
+from allennlp.training.metrics import CategoricalAccuracy
 from relex.modules.offset_embedders import OffsetEmbedder
+from relex.metrics import F1Measure
 
 
 @Model.register("basic_relation_classifier")
@@ -82,10 +83,9 @@ class BasicRelationClassifier(Model):
 
         if embedding_projection_dim is not None:
             self._embedding_projection = torch.nn.Linear(
-                text_field_embedder.get_output_dim() + offset_embedding_dim,
-                embedding_projection_dim,
+                text_field_embedder.get_output_dim(), embedding_projection_dim
             )
-            text_encoder_input_dim = embedding_projection_dim
+            text_encoder_input_dim = embedding_projection_dim + offset_embedding_dim
 
         if text_encoder_input_dim != text_encoder.get_input_dim():
             raise ConfigurationError(
@@ -115,6 +115,7 @@ class BasicRelationClassifier(Model):
                 )
             )
 
+        self.metrics = {"accuracy": CategoricalAccuracy()}
         self._f1_measure = F1Measure(vocabulary=self.vocab, average="macro")
 
         self.loss = torch.nn.CrossEntropyLoss()
@@ -150,29 +151,34 @@ class BasicRelationClassifier(Model):
         embedded_text = self.text_field_embedder(text)
         text_mask = util.get_text_field_mask(text)
 
+        if self._embedding_projection_dim:
+            embedded_text = self._embedding_projection(embedded_text)
+
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
             embeddings.append(self.offset_embedder_head(embedded_text, span=head))
         if self.offset_embedder_tail is not None:
             embeddings.append(self.offset_embedder_tail(embedded_text, span=tail))
 
-        if self.offset_embedder_head.is_additive():
+        if (
+            self.offset_embedder_head is not None
+            and self.offset_embedder_head.is_additive()
+        ):
             embedded_text = embeddings[0]
             for e in embeddings[1:]:
                 embedded_text = embedded_text + e
         else:
             embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
 
-        if self._embedding_projection_dim:
-            embedded_text = self._embedding_projection(embedded_text)
-
         encoded_text = self.text_encoder(embedded_text, text_mask)
 
         logits = self.classifier_feedforward(encoded_text)
 
-        output_dict = {"logits": logits}
+        output_dict = {"logits": logits, "input_rep": encoded_text}
         if label is not None:
             loss = self.loss(logits, label)
+            for metric in self.metrics.values():
+                metric(logits, label)
             self._f1_measure(logits, label)
             output_dict["loss"] = loss
 
@@ -198,7 +204,10 @@ class BasicRelationClassifier(Model):
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics_to_return = {}
+        metrics_to_return = {
+            metric_name: metric.get_metric(reset)
+            for metric_name, metric in self.metrics.items()
+        }
 
         f1_dict = self._f1_measure.get_metric(reset=reset)
         if self._verbose_metrics:
