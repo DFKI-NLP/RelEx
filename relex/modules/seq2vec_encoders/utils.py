@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from allennlp.nn.util import masked_max, masked_mean
 
 
 def position_encoding_init(n_position: int, embedding_dim: int):
@@ -23,62 +24,14 @@ def position_encoding_init(n_position: int, embedding_dim: int):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-def sum_pool(x, lengths):
-    out = torch.FloatTensor(x.size(1), x.size(2)).zero_()  # BxF
-    for i in range(x.size(1)):
-        out[i] = torch.sum(x[: lengths[i], i, :], 0)
-    return out
-
-
-def mean_pool(x, lengths):
-    out = torch.FloatTensor(x.size(1), x.size(2)).zero_()  # BxF
-    for i in range(x.size(1)):
-        out[i] = torch.mean(x[: lengths[i], i, :], 0)
-    return out
-
-
-def max_pool(x, lengths):
-    out = torch.FloatTensor(x.size(1), x.size(2)).zero_()  # BxF
-    for i in range(x.size(1)):
-        out[i, :] = torch.max(x[: lengths[i], i, :], 0)[0]
-    return out
-
-
-def min_pool(x, lengths):
-    out = torch.FloatTensor(x.size(1), x.size(2)).zero_()  # BxF
-    for i in range(x.size(1)):
-        out[i] = torch.min(x[: lengths[i], i, :], 0)[0]
-    return out
-
-
-def hier_pool(x, lengths, n=5):
-    out = torch.FloatTensor(x.size(1), x.size(2)).zero_()  # BxF
-    if x.size(0) <= n:
-        return mean_pool(x, lengths)  # BxF
-    for i in range(x.size(1)):
-        sliders = []
-        if lengths[i] <= n:
-            out[i] = torch.mean(x[: lengths[i], i, :], 0)
-            continue
-        for j in range(lengths[i] - n):
-            win = torch.mean(x[j : j + n, i, :], 0, keepdim=True)  # 1xN
-            sliders.append(win)
-        sliders = torch.cat(sliders, 0)
-        out[i] = torch.max(sliders, 0)[0]
-    return out
-
-
-def pool(out, lengths: torch.Tensor, pooling: str):
-    if params.pooling == "mean":
-        out = mean_pool(out, lengths)
-    elif params.pooling == "max":
-        out = max_pool(out, lengths)
-    elif params.pooling == "min":
-        out = min_pool(out, lengths)
-    elif params.pooling == "hier":
-        out = hier_pool(out, lengths)
-    elif params.pooling == "sum":
-        out = sum_pool(out, lengths)
+def pool(
+    vector: torch.Tensor, mask: torch.Tensor, dim: int, pooling: str
+) -> torch.Tensor:
+    if pooling == "max":
+        return masked_max(vector, mask, dim)
+    elif pooling == "mean":
+        return masked_mean(vector, mask, dim)
+    elif pooling == "sum":
+        return torch.sum(vector, dim)
     else:
-        raise ValueError("No valid pooling operation specified!")
-    return out
+        raise ValueError(f"'{pooling}' is not a valid pooling operation.")

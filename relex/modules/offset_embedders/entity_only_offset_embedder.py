@@ -10,7 +10,6 @@ class EntityOnlyOffsetEmbedder(OffsetEmbedder):
 
         self._n_position = n_position
         self._embedding_dim = embedding_dim
-        # self._embedding = torch.nn.Embedding(2 * n_position, embedding_dim)
 
     def get_output_dim(self) -> int:
         return self._embedding_dim
@@ -18,8 +17,10 @@ class EntityOnlyOffsetEmbedder(OffsetEmbedder):
     def is_additive(self) -> bool:
         return False
 
-    def forward(self, inputs: torch.Tensor, span: torch.Tensor) -> torch.Tensor:
-        # input-> [B x seq_len x d], offset -> [B x 2]
+    def forward(
+        self, inputs: torch.Tensor, mask: torch.Tensor, span: torch.Tensor
+    ) -> torch.Tensor:
+        # input -> [B x seq_len x d], offset -> [B x 2]
         batch_size, seq_len, _ = inputs.size()
 
         offset = span[:, 0].unsqueeze(-1)
@@ -27,10 +28,10 @@ class EntityOnlyOffsetEmbedder(OffsetEmbedder):
             seq_len, util.get_device_of(inputs)
         ).repeat((batch_size, 1))
 
-        mask = position_range == offset
+        offset_mask = position_range == offset
 
         position_markers = inputs.new_ones((batch_size, seq_len), requires_grad=True)
-        position_markers = position_markers * mask.float()
+        position_markers = position_markers * offset_mask.float()
         position_markers = position_markers.unsqueeze(-1)
 
         return position_markers

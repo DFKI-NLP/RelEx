@@ -3,22 +3,16 @@ from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
-from allennlp.nn.util import masked_max, masked_mean
+from relex.modules.seq2vec_encoders.utils import pool
 
 
 @Seq2VecEncoder.register("seq2seq_pool")
-class Seq2SeqPool(Seq2VecEncoder):
+class Seq2SeqPoolEncoder(Seq2VecEncoder):
     def __init__(self, encoder: Seq2SeqEncoder, pooling: str = "max") -> None:
         super().__init__()
 
         self._encoder = encoder
-
-        if pooling == "max":
-            self._pool = masked_max
-        elif pooling == "mean":
-            self._pool = masked_mean
-        else:
-            raise ConfigurationError(f"Unknown pooling '{pooling}'.")
+        self._pooling = pooling
 
     @overrides
     def get_input_dim(self) -> int:
@@ -35,4 +29,4 @@ class Seq2SeqPool(Seq2VecEncoder):
             tokens = tokens * mask.unsqueeze(-1).float()
 
         tokens = self._encoder(tokens, mask)
-        return self._pool(tokens, mask.unsqueeze(-1), dim=1)
+        return pool(tokens, mask.unsqueeze(-1), dim=1, pooling=self._pooling)

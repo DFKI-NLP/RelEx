@@ -156,9 +156,13 @@ class BasicRelationClassifier(Model):
 
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
-            embeddings.append(self.offset_embedder_head(embedded_text, span=head))
+            embeddings.append(
+                self.offset_embedder_head(embedded_text, text_mask, span=head)
+            )
         if self.offset_embedder_tail is not None:
-            embeddings.append(self.offset_embedder_tail(embedded_text, span=tail))
+            embeddings.append(
+                self.offset_embedder_tail(embedded_text, text_mask, span=tail)
+            )
 
         if (
             self.offset_embedder_head is not None

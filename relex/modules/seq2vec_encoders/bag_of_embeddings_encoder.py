@@ -5,12 +5,12 @@ import numpy as np
 from overrides import overrides
 from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from allennlp.nn.util import masked_max
 from allennlp.nn.activations import Activation
+from relex.modules.seq2vec_encoders.utils import pool
 
 
-@Seq2VecEncoder.register("bag_of_random_embedding_projections")
-class BagOfRandomEmbeddingProjections(Seq2VecEncoder):
+@Seq2VecEncoder.register("bag_of_embeddings")
+class BagOfEmbeddings(Seq2VecEncoder):
     """
     """
 
@@ -24,6 +24,7 @@ class BagOfRandomEmbeddingProjections(Seq2VecEncoder):
         super().__init__()
 
         self._embedding_dim = embedding_dim
+        self._pooling = pooling
         self._projection_dim = projection_dim
 
         self._activation = Activation.by_name(activation) if activation else None
@@ -47,10 +48,10 @@ class BagOfRandomEmbeddingProjections(Seq2VecEncoder):
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 
-        if self._projection_dim:
+        if self._projection_dim is not None:
             tokens = self._projection(tokens)
 
-        out = masked_max(tokens, mask.unsqueeze(-1), dim=1)
+        out = pool(tokens, mask.unsqueeze(-1), dim=1, pooling=self._pooling)
 
         if self._activation is not None:
             out = self._activation(out)
