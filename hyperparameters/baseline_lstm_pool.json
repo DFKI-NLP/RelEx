@@ -1,0 +1,20 @@
+{
+    "offset_embedding_dim": {
+        "eval": "np.random.choice(np.linspace(10, 50, dtype=np.int))"
+    },
+    "text_encoder_hidden_dim": {
+        "eval": "np.random.choice(np.linspace(50, 200, dtype=np.int))"
+    },
+    "text_encoder_num_layers": {
+        "eval": "np.random.choice([1, 2, 3])"
+    },
+    "text_encoder_bidirectional": {
+        "eval": "np.random.choice([True, False])"
+    },
+    "text_encoder_dropout": {
+        "eval": "np.random.choice(np.linspace(0.0, 0.5))"
+    },
+    "text_encoder_pooling": {
+        "eval": "np.random.choice(['mean', 'max'])"
+    }
+}

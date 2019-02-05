@@ -37,48 +37,6 @@ class TestSemEval2010Task8DatasetReader(AllenNlpTestCase):
             "label": "Component-Whole(e2,e1)",
         }
 
-        head_offsets = [
-            -12,
-            -11,
-            -10,
-            -9,
-            -8,
-            -7,
-            -6,
-            -5,
-            -4,
-            -3,
-            -2,
-            -1,
-            0,
-            1,
-            2,
-            3,
-            4,
-        ]
-        head_offsets = [o + MAX_LEN for o in head_offsets]
-
-        tail_offsets = [
-            -15,
-            -14,
-            -13,
-            -12,
-            -11,
-            -10,
-            -9,
-            -8,
-            -7,
-            -6,
-            -5,
-            -4,
-            -3,
-            -2,
-            -1,
-            0,
-            1,
-        ]
-        tail_offsets = [o + MAX_LEN for o in tail_offsets]
-
         assert len(instances) == 10
         fields = instances[0].fields
         tokens = fields["text"].tokens
@@ -89,9 +47,3 @@ class TestSemEval2010Task8DatasetReader(AllenNlpTestCase):
         assert fields["tail"].span_start == instance1["tail"][0]
         assert fields["tail"].span_end == instance1["tail"][1]
         assert fields["metadata"]["id"] == instance1["id"]
-
-        assert all([hasattr(token, "offset_head") for token in tokens])
-        assert all([hasattr(token, "offset_tail") for token in tokens])
-
-        assert head_offsets == [token.offset_head for token in tokens]
-        assert tail_offsets == [token.offset_tail for token in tokens]
