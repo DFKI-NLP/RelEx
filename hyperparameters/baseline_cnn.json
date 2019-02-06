@@ -1,0 +1,14 @@
+{
+    "offset_embedding_dim": {
+        "eval": "np.random.choice(np.linspace(10, 50, dtype=np.int))"
+    },
+    "text_encoder_num_filters": {
+        "eval": "np.random.choice(np.linspace(50, 400, dtype=np.int))"
+    },
+    "text_encoder_ngram_filter_sizes": {
+        "eval": "np.random.choice([[2, 3], [2, 3, 4], [2, 3, 4, 5], [3, 4, 5], [4, 5]])"
+    },
+    "lr": {
+        "eval": "np.random.choice(np.logspace(-5, -2))"
+    }
+}

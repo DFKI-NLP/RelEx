@@ -1,6 +1,9 @@
 function (
-  embedding_dim = 300, embedding_projection_dim = null,
-  offset_type = "entity_only", offset_embedding_dim = null, freeze_offset_embeddings = true,
+  lr = 1e-3, num_epochs = 200,
+  embedding_dim = 300, embedding_projection_dim = 3072,
+  offset_type = "relative", offset_embedding_dim = 512, freeze_offset_embeddings = true,
+  text_encoder_hidden_dim = 300, text_encoder_num_layers = 2, text_encoder_bidirectional = true, 
+  text_encoder_dropout = 0, text_encoder_pooling = "mean",
   max_len = 200
   ) {
 
@@ -10,6 +13,7 @@ function (
   local combined_offset_embedding_dim = if use_offset_embeddings && (offset_type != "sine") then 2 * offset_embedding_dim else 0,
   local text_encoder_input_dim = combined_offset_embedding_dim
                                  + (if use_embedding_projection then embedding_projection_dim else embedding_dim),
+  local classifier_feedforward_input_dim = text_encoder_hidden_dim * (if text_encoder_bidirectional then 2 else 1),
 
   "dataset_reader": {
     "type": "semeval2010_task8",
@@ -17,7 +21,7 @@ function (
     "token_indexers": {
       "tokens": {
         "type": "single_id",
-        "lowercase_tokens": true
+        "lowercase_tokens": true,
       },
     },
   },
@@ -34,7 +38,7 @@ function (
         "type": "embedding",
         "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": embedding_dim,
-        "trainable": false
+        "trainable": false,
       },
     },
     [if use_offset_embeddings then "offset_embedder_head"]: {
@@ -52,22 +56,23 @@ function (
       "encoder": {
         "type": "lstm",
         "input_size": text_encoder_input_dim,
-        "hidden_size": 2048,
-        "bidirectional": true,
-        "num_layers": 1,
+        "hidden_size": text_encoder_hidden_dim,
+        "bidirectional": text_encoder_bidirectional,
+        "num_layers": text_encoder_num_layers,
+        "dropout": text_encoder_dropout,
       },
-      "pooling": "mean"
+      "pooling": text_encoder_pooling,
     },
     "classifier_feedforward": {
-      "input_dim": 4096,
+      "input_dim": classifier_feedforward_input_dim,
       "num_layers": 1,
       "hidden_dims": [19],
       "activations": ["linear"],
-      "dropout": [0.0]
+      "dropout": [0.0],
     },
     "initializer": [
       ["text_encoder._encoder._module.weight.*", "kaiming_uniform"],
-      ["offset_embedder.*weight.*", {"type": "sparse", "sparsity": 0.2}],
+      ["offset_embedder.*weight.*", "kaiming_uniform"],
       [".*embedding_projection.*weight.*", "kaiming_uniform"],
       [".*embedding_projection.*bias.*", {"type": "constant", "val": 0}],
     ],
@@ -76,19 +81,18 @@ function (
   "iterator": {
     "type": "bucket",
     "sorting_keys": [["text", "num_tokens"]],
-    "batch_size": 64
+    "batch_size": 32,
   },
 
   "trainer": {
-    "num_epochs": 200,
+    "num_epochs": num_epochs,
     "patience": 10,
     "cuda_device": 0,
     "num_serialized_models_to_keep": 1,
-    // "grad_clipping": 5.0,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
       "type": "adam",
-      "lr": 1e-3
+      "lr": lr,
     },
     "no_grad": [
       "text_encoder.*",
