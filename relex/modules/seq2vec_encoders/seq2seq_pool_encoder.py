@@ -29,4 +29,10 @@ class Seq2SeqPoolEncoder(Seq2VecEncoder):
             tokens = tokens * mask.unsqueeze(-1).float()
 
         tokens = self._encoder(tokens, mask)
-        return pool(tokens, mask.unsqueeze(-1), dim=1, pooling=self._pooling)
+        return pool(
+            tokens,
+            mask.unsqueeze(-1),
+            dim=1,
+            pooling=self._pooling,
+            is_bidirectional=self._encoder.is_bidirectional(),
+        )
