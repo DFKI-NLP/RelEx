@@ -15,12 +15,12 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-@DatasetReader.register("semeval2010_task8")
-class SemEval2010Task8DatasetReader(DatasetReader):
+@DatasetReader.register("tacred")
+class TacredDatasetReader(DatasetReader):
     """
-    Reads a JSONL file containing examples from the SemEval 2010 Task 8 dataset, 
+    Reads a JSON file containing examples from the TACRED dataset, 
     and creates a dataset suitable for relation classification.
-    The JSONL could have other fields, too, but they are ignored.
+    The JSON could have other fields, too, but they are ignored.
     The output of ``read`` is a list of ``Instance`` s with the fields:
         text: ``TextField``
         head: ``SpanField``
@@ -63,22 +63,16 @@ class SemEval2010Task8DatasetReader(DatasetReader):
         file_path = cached_path(file_path)
 
         with open(file_path, "r") as data_file:
-            logger.info(
-                "Reading SemEval 2010 Task 8 instances from jsonl dataset at: %s",
-                file_path,
-            )
-            for line in data_file:
-                example = json.loads(line)
-
-                text = " ".join(example["tokens"])
-                relation = example["label"]
-
-                entity1, entity2 = example["entities"]
+            logger.info("Reading TACRED instances from json dataset at: %s", file_path)
+            data = json.load(data_file)
+            for example in data:
+                text = " ".join(example["token"])
+                relation = example["relation"]
 
                 id_ = example["id"]
 
-                head = (entity1[0], entity1[1])
-                tail = (entity2[0], entity2[1])
+                head = (example["subj_start"], example["subj_end"])
+                tail = (example["obj_start"], example["obj_end"])
 
                 yield self.text_to_instance(text, head, tail, id_, relation)
 
@@ -104,10 +98,10 @@ class SemEval2010Task8DatasetReader(DatasetReader):
         fields = {
             "text": text_tokens_field,
             "head": SpanField(
-                head_start, head_end - 1, sequence_field=text_tokens_field
+                head_start, head_end, sequence_field=text_tokens_field
             ),
             "tail": SpanField(
-                tail_start, tail_end - 1, sequence_field=text_tokens_field
+                tail_start, tail_end, sequence_field=text_tokens_field
             ),
         }
 

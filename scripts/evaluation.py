@@ -1,5 +1,6 @@
 import argparse
-from relex.evaluation.semeval2010_task8_evaluation import evaluate
+from relex.evaluation import semeval2010_task8_evaluation
+from relex.evaluation import tacred_evaluation
 
 
 def _get_parser():
@@ -10,6 +11,9 @@ def _get_parser():
         type=str,
         required=True,
         help="directory containing the model archive file",
+    )
+    parser.add_argument(
+        "--dataset", type=str, required=True, help="dataset to be evaluated"
     )
     parser.add_argument(
         "--test-file",
@@ -37,15 +41,23 @@ def main():
     parser = _get_parser()
     args = parser.parse_args()
 
-    print(
-        evaluate(
+    if args.dataset == "semeval2010":
+        print(
+            semeval2010_task8_evaluation.evaluate(
+                model_dir=args.model_dir,
+                test_file=args.test_file,
+                eval_script_file=args.official_eval_script,
+                batch_size=args.batch_size,
+                cuda_device=args.cuda_device,
+            )
+        )
+    elif args.dataset == "tacred":
+        tacred_evaluation.evaluate(
             model_dir=args.model_dir,
             test_file=args.test_file,
-            eval_script_file=args.official_eval_script,
             batch_size=args.batch_size,
             cuda_device=args.cuda_device,
         )
-    )
 
 
 if __name__ == "__main__":

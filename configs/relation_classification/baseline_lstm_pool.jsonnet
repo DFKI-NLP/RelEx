@@ -1,24 +1,42 @@
 function (
   lr = 1e-3, num_epochs = 200,
   embedding_dim = 300,
-  offset_type = "relative", offset_embedding_dim = 50,
+  ner_embedding_dim = null, pos_embedding_dim = null,
+  offset_type = "relative", offset_embedding_dim = 10,
   text_encoder_hidden_dim = 300, text_encoder_num_layers = 2, text_encoder_bidirectional = true, 
-  text_encoder_dropout = 0, text_encoder_pooling = "mean",
+  text_encoder_dropout = 0, text_encoder_pooling = "max",
   max_len = 200) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
+  local use_ner_embeddings = (ner_embedding_dim != null),
+  local use_pos_embeddings = (pos_embedding_dim != null),
 
   local combined_offset_embedding_dim = if use_offset_embeddings && (offset_type != "sine") then 2 * offset_embedding_dim else 0,
-  local text_encoder_input_dim = combined_offset_embedding_dim + embedding_dim,
+  local text_encoder_input_dim = combined_offset_embedding_dim + embedding_dim + (if use_ner_embeddings then ner_embedding_dim else 0) 
+                                 + (if use_pos_embeddings then pos_embedding_dim else 0),
   local classifier_feedforward_input_dim = text_encoder_hidden_dim * (if text_encoder_bidirectional then 2 else 1),
 
   "dataset_reader": {
     "type": "semeval2010_task8",
     "max_len": max_len,
+    "tokenizer": {
+      "type": "word",
+      "word_splitter": {
+        "type": "spacy",
+        "ner": use_ner_embeddings,
+        "pos_tags": use_pos_embeddings,
+      },
+    },
     "token_indexers": {
       "tokens": {
         "type": "single_id",
         "lowercase_tokens": true
+      },
+      [if use_ner_embeddings then "ner_tokens"]: {
+        "type": "ner_tag"
+      },
+      [if use_pos_embeddings then "pos_tokens"]: {
+        "type": "pos_tag"
       },
     },
   },
@@ -35,6 +53,16 @@ function (
         "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": false
+      },
+      [if use_ner_embeddings then "ner_tokens"]: {
+        "type": "embedding",
+        "embedding_dim": ner_embedding_dim,
+        "trainable": true
+      },
+      [if use_pos_embeddings then "pos_tokens"]: {
+        "type": "embedding",
+        "embedding_dim": pos_embedding_dim,
+        "trainable": true
       },
     },
     [if use_offset_embeddings then "offset_embedder_head"]: {
@@ -57,7 +85,7 @@ function (
         "num_layers": text_encoder_num_layers,
         "dropout": text_encoder_dropout,
       },
-      "pooling": "mean"
+      "pooling": text_encoder_pooling,
     },
     "classifier_feedforward": {
       "input_dim": classifier_feedforward_input_dim,
