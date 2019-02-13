@@ -46,6 +46,7 @@ class TacredDatasetReader(DatasetReader):
     def __init__(
         self,
         max_len: int,
+        masking_mode: str = None,
         lazy: bool = False,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
@@ -56,6 +57,7 @@ class TacredDatasetReader(DatasetReader):
             word_splitter=JustSpacesWordSplitter()
         )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
+        self._masking_mode = masking_mode
 
     @overrides
     def _read(self, file_path: str):
@@ -66,13 +68,19 @@ class TacredDatasetReader(DatasetReader):
             logger.info("Reading TACRED instances from json dataset at: %s", file_path)
             data = json.load(data_file)
             for example in data:
-                text = " ".join(example["token"])
+                tokens = example["token"]
                 relation = example["relation"]
 
                 id_ = example["id"]
 
                 head = (example["subj_start"], example["subj_end"])
                 tail = (example["obj_start"], example["obj_end"])
+
+                if self._masking_mode is not None:
+                    ner_labels = example['stanford_ner']
+                    tokens = self._apply_masking_mode(tokens, head, tail, ner_labels)
+
+                text = " ".join(tokens)
 
                 yield self.text_to_instance(text, head, tail, id_, relation)
 
@@ -108,3 +116,24 @@ class TacredDatasetReader(DatasetReader):
             fields["label"] = LabelField(relation)
 
         return Instance(fields)
+
+    def _apply_masking_mode(self, tokens, head, tail, ner_labels):
+        if self._masking_mode == 'NER':
+            head_replacement = f'__{ner_labels[head[0]]}__'
+            tail_replacement = f'__{ner_labels[tail[0]]}__'
+        elif self._masking_mode == 'Grammar':
+            head_replacement = '__SUB__'
+            tail_replacement = '__OBJ__'
+        elif self._masking_mode == 'NER+Grammar':
+            head_replacement = f'__{ner_labels[head[0]]}_SUB__'
+            tail_replacement = f'__{ner_labels[tail[0]]}_OBJ__'
+        elif self._masking_mode == 'UNK':
+            head_replacement = '__UNK__'
+            tail_replacement = '__UNK__'
+        else:
+            raise RuntimeError('Unknown masking mode provided')
+
+        tokens[head[0]:head[1]+1] = [head_replacement] * (head[1]-head[0]+1)
+        tokens[tail[0]:tail[1]+1] = [tail_replacement] * (tail[1]-tail[0]+1)
+
+        return tokens
