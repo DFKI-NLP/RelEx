@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 @DatasetReader.register("tacred")
 class TacredDatasetReader(DatasetReader):
     """
-    Reads a JSON file containing examples from the TACRED dataset, 
+    Reads a JSON file containing examples from the TACRED dataset,
     and creates a dataset suitable for relation classification.
     The JSON could have other fields, too, but they are ignored.
     The output of ``read`` is a list of ``Instance`` s with the fields:
@@ -97,12 +97,8 @@ class TacredDatasetReader(DatasetReader):
         # SpanField expects an inclusive end index
         fields = {
             "text": text_tokens_field,
-            "head": SpanField(
-                head_start, head_end, sequence_field=text_tokens_field
-            ),
-            "tail": SpanField(
-                tail_start, tail_end, sequence_field=text_tokens_field
-            ),
+            "head": SpanField(head_start, head_end, sequence_field=text_tokens_field),
+            "tail": SpanField(tail_start, tail_end, sequence_field=text_tokens_field),
         }
 
         if id_ is not None:
