@@ -27,7 +27,7 @@ function (
 
   "vocabulary": {
     min_count: 2
-  }
+  },
 
   "model": {
     "type": "basic_relation_classifier",
