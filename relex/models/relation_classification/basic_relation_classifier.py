@@ -50,6 +50,7 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
+        encoding_dropout: Optional[float] = None,
         embedding_projection_dim: Optional[int] = None,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
         offset_embedder_tail: Optional[OffsetEmbedder] = None,
@@ -62,6 +63,7 @@ class BasicRelationClassifier(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
+        self.encoding_dropout = encoding_dropout
         self.classifier_feedforward = classifier_feedforward
         self._embedding_projection_dim = embedding_projection_dim
         self.offset_embedder_head = offset_embedder_head
@@ -175,6 +177,9 @@ class BasicRelationClassifier(Model):
             embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
 
         encoded_text = self.text_encoder(embedded_text, text_mask)
+
+        if self.encoding_dropout is not None:
+            encoded_text = F.dropout(encoded_text, self.encoding_dropout)
 
         logits = self.classifier_feedforward(encoded_text)
 
