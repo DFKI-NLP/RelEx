@@ -14,6 +14,7 @@ function (
   "dataset_reader": {
     "type": "tacred",
     "max_len": max_len,
+    "masking_mode": "NER+Grammar",
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -26,7 +27,7 @@ function (
   "validation_data_path": "data/tacred/dev.json",
 
   "vocabulary": {
-    min_count: 2
+    "min_count": {"tokens": 2},
   },
 
   "model": {
