@@ -21,11 +21,13 @@ class F1Measure(Metric):
         vocabulary: Vocabulary,
         average: str = "macro",
         label_namespace: str = "labels",
+        ignore_label: str = None,
     ) -> None:
         self._label_vocabulary = vocabulary.get_index_to_token_vocabulary(
             label_namespace
         )
         self._average = average
+        self._ignore_label = ignore_label
         self._true_positives: Dict[str, int] = defaultdict(int)
         self._true_negatives: Dict[str, int] = defaultdict(int)
         self._false_positives: Dict[str, int] = defaultdict(int)
@@ -131,11 +133,36 @@ class F1Measure(Metric):
             all_metrics[f1_key] = f1_measure
 
         if self._average == "micro":
-            precision, recall, f1_measure = self._compute_metrics(
-                sum(self._true_positives.values()),
-                sum(self._false_positives.values()),
-                sum(self._false_negatives.values()),
-            )
+            if self._ignore_label is not None:
+                precision, recall, f1_measure = self._compute_metrics(
+                    sum(
+                        [
+                            val
+                            for l, val in self._true_positives.items()
+                            if l != self._ignore_label
+                        ]
+                    ),
+                    sum(
+                        [
+                            val
+                            for l, val in self._false_positives.items()
+                            if l != self._ignore_label
+                        ]
+                    ),
+                    sum(
+                        [
+                            val
+                            for l, val in self._false_negatives.items()
+                            if l != self._ignore_label
+                        ]
+                    ),
+                )
+            else:
+                precision, recall, f1_measure = self._compute_metrics(
+                    sum(self._true_positives.values()),
+                    sum(self._false_positives.values()),
+                    sum(self._false_negatives.values()),
+                )
         elif self._average == "macro":
             precision = 0.0
             recall = 0.0
