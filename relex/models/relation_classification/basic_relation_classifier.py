@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List, Any
 
 import numpy
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 from overrides import overrides
 import torch
 import torch.nn.functional as F
@@ -12,6 +13,8 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
+from torch import Tensor
+
 from relex.modules.offset_embedders import OffsetEmbedder
 from relex.metrics import F1Measure
 
@@ -50,6 +53,7 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
+        word_dropout: Optional[float] = None,
         encoding_dropout: Optional[float] = None,
         embedding_projection_dim: Optional[int] = None,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
@@ -63,6 +67,7 @@ class BasicRelationClassifier(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
+        self.word_dropout = word_dropout
         self.encoding_dropout = encoding_dropout
         self.classifier_feedforward = classifier_feedforward
         self._embedding_projection_dim = embedding_projection_dim
@@ -150,8 +155,22 @@ class BasicRelationClassifier(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        embedded_text = self.text_field_embedder(text)
         text_mask = util.get_text_field_mask(text)
+
+        if self.word_dropout is not None:
+            # Generate a binary matrix with ones for dropped words
+            dropout_mask = torch.FloatTensor(text_mask.shape).uniform_() > (1 - self.word_dropout)
+            dropout_mask_wo_padding = (dropout_mask & text_mask.byte()).long()
+
+            # Set the dropped words to the OOV token index
+            unk_token_idx = self.vocab.get_token_index(DEFAULT_OOV_TOKEN)
+            unk_token_replacements = unk_token_idx * dropout_mask_wo_padding
+
+            # Replace dropped word indexes by the OOV token
+            dropped_token_idxs = text['tokens'] * (1 - dropout_mask_wo_padding)
+            text['tokens'] = dropped_token_idxs + unk_token_replacements
+
+        embedded_text = self.text_field_embedder(text)
 
         if self._embedding_projection_dim:
             embedded_text = self._embedding_projection(embedded_text)
