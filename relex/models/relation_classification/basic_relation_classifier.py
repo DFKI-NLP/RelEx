@@ -160,6 +160,7 @@ class BasicRelationClassifier(Model):
         if self.training and self.word_dropout is not None:
             # Generate a binary mask with ones for dropped words
             dropout_mask = Bernoulli(self.word_dropout).sample(text_mask.shape)
+            dropout_mask = dropout_mask.to(device=text_mask.device)
             dropout_mask = dropout_mask.byte() & text_mask.byte()
 
             # Set the dropped words to the OOV token index
