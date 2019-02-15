@@ -15,6 +15,20 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def normalize_glove(token):
+    mapping = {
+        "-LRB-": "(",
+        "-RRB-": ")",
+        "-LSB-": "[",
+        "-RSB-": "]",
+        "-LCB-": "{",
+        "-RCB-": "}",
+    }
+    if token in mapping:
+        token = mapping[token]
+    return token
+
+
 @DatasetReader.register("tacred")
 class TacredDatasetReader(DatasetReader):
     """
@@ -68,7 +82,7 @@ class TacredDatasetReader(DatasetReader):
             logger.info("Reading TACRED instances from json dataset at: %s", file_path)
             data = json.load(data_file)
             for example in data:
-                tokens = example["token"]
+                tokens = [normalize_glove(token) for token in example["token"]]
                 relation = example["relation"]
 
                 id_ = example["id"]
@@ -84,9 +98,7 @@ class TacredDatasetReader(DatasetReader):
 
                 text = " ".join(tokens)
 
-                yield self.text_to_instance(
-                    text, head, tail, id_, relation, ner, pos
-                )
+                yield self.text_to_instance(text, head, tail, id_, relation, ner, pos)
 
     @overrides
     def text_to_instance(

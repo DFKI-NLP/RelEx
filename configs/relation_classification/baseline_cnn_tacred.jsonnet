@@ -4,6 +4,7 @@ function (
   ner_embedding_dim = 30, pos_embedding_dim = 30,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_num_filters = 500, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
+  masking_mode = "NER+Grammar",
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
@@ -25,7 +26,7 @@ function (
   "dataset_reader": {
     "type": dataset,
     "max_len": max_len,
-    "masking_mode": "NER+Grammar",
+    "masking_mode": masking_mode,
     "token_indexers": {
       "tokens": {
         "type": "single_id",
@@ -90,9 +91,6 @@ function (
       "activations": ["linear"],
       "dropout": [0.0],
     },
-    // "initializer": [
-    //   ["text_field_embedder.token_embedder.*.weight", "xavier_uniform"],
-    // ],
     // "regularizer": [
     //   ["text_encoder.conv_layer_.*weight", {"type": "l2", "alpha": 1e-3}],
     // ],
