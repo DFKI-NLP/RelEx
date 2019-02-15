@@ -13,7 +13,7 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
-from torch import Tensor
+from torch.distributions import Bernoulli
 
 from relex.modules.offset_embedders import OffsetEmbedder
 from relex.metrics import F1Measure
@@ -157,18 +157,14 @@ class BasicRelationClassifier(Model):
         """
         text_mask = util.get_text_field_mask(text)
 
-        if self.word_dropout is not None:
-            # Generate a binary matrix with ones for dropped words
-            dropout_mask = torch.FloatTensor(text_mask.shape).uniform_() > (1 - self.word_dropout)
-            dropout_mask_wo_padding = (dropout_mask & text_mask.byte()).long()
+        if self.training and self.word_dropout is not None:
+            # Generate a binary mask with ones for dropped words
+            dropout_mask = Bernoulli(self.word_dropout).sample(text_mask.shape)
+            dropout_mask = dropout_mask.byte() & text_mask.byte()
 
             # Set the dropped words to the OOV token index
-            unk_token_idx = self.vocab.get_token_index(DEFAULT_OOV_TOKEN)
-            unk_token_replacements = unk_token_idx * dropout_mask_wo_padding
-
-            # Replace dropped word indexes by the OOV token
-            dropped_token_idxs = text['tokens'] * (1 - dropout_mask_wo_padding)
-            text['tokens'] = dropped_token_idxs + unk_token_replacements
+            oov_token_idx = self.vocab.get_token_index(DEFAULT_OOV_TOKEN)
+            text['tokens'].masked_fill_(dropout_mask, oov_token_idx)
 
         embedded_text = self.text_field_embedder(text)
 
