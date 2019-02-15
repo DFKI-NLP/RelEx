@@ -55,12 +55,13 @@ class BasicRelationClassifier(Model):
         classifier_feedforward: FeedForward,
         word_dropout: Optional[float] = None,
         encoding_dropout: Optional[float] = None,
-        embedding_projection_dim: Optional[int] = None,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
         offset_embedder_tail: Optional[OffsetEmbedder] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
         regularizer: Optional[RegularizerApplicator] = None,
         verbose_metrics: bool = False,
+        ignore_label: str = None,
+        f1_average: str = "macro",
     ) -> None:
         super(BasicRelationClassifier, self).__init__(vocab, regularizer)
 
@@ -68,9 +69,10 @@ class BasicRelationClassifier(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
         self.word_dropout = word_dropout
-        self.encoding_dropout = encoding_dropout
+        self.encoding_dropout = (
+            torch.nn.Dropout(encoding_dropout) if encoding_dropout else None
+        )
         self.classifier_feedforward = classifier_feedforward
-        self._embedding_projection_dim = embedding_projection_dim
         self.offset_embedder_head = offset_embedder_head
         self.offset_embedder_tail = offset_embedder_tail
         self._verbose_metrics = verbose_metrics
@@ -87,12 +89,6 @@ class BasicRelationClassifier(Model):
         text_encoder_input_dim = (
             text_field_embedder.get_output_dim() + offset_embedding_dim
         )
-
-        if embedding_projection_dim is not None:
-            self._embedding_projection = torch.nn.Linear(
-                text_field_embedder.get_output_dim(), embedding_projection_dim
-            )
-            text_encoder_input_dim = embedding_projection_dim + offset_embedding_dim
 
         if text_encoder_input_dim != text_encoder.get_input_dim():
             raise ConfigurationError(
@@ -123,7 +119,9 @@ class BasicRelationClassifier(Model):
             )
 
         self.metrics = {"accuracy": CategoricalAccuracy()}
-        self._f1_measure = F1Measure(vocabulary=self.vocab, average="macro")
+        self._f1_measure = F1Measure(
+            vocabulary=self.vocab, average=f1_average, ignore_label=ignore_label
+        )
 
         self.loss = torch.nn.CrossEntropyLoss()
 
@@ -169,9 +167,6 @@ class BasicRelationClassifier(Model):
 
         embedded_text = self.text_field_embedder(text)
 
-        if self._embedding_projection_dim:
-            embedded_text = self._embedding_projection(embedded_text)
-
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
             embeddings.append(
@@ -182,20 +177,15 @@ class BasicRelationClassifier(Model):
                 self.offset_embedder_tail(embedded_text, text_mask, span=tail)
             )
 
-        if (
-            self.offset_embedder_head is not None
-            and self.offset_embedder_head.is_additive()
-        ):
-            embedded_text = embeddings[0]
-            for e in embeddings[1:]:
-                embedded_text = embedded_text + e
+        if len(embeddings) > 1:
+            embedded_text = torch.cat(embeddings, dim=-1)
         else:
-            embedded_text = torch.cat([e for e in embeddings if e is not None], dim=-1)
+            embedded_text = embeddings[0]
 
         encoded_text = self.text_encoder(embedded_text, text_mask)
 
         if self.encoding_dropout is not None:
-            encoded_text = F.dropout(encoded_text, self.encoding_dropout)
+            encoded_text = self.encoding_dropout(encoded_text)
 
         logits = self.classifier_feedforward(encoded_text)
 

@@ -27,13 +27,23 @@ class RelativeOffsetEmbedder(OffsetEmbedder):
         # input -> [B x seq_len x d], offset -> [B x 2]
         batch_size, seq_len, _ = inputs.size()
 
-        offset = span[:, 0]
-        position_range = util.get_range_vector(
-            seq_len, util.get_device_of(inputs)
-        ).repeat((batch_size, 1))
+        pos_range = util.get_range_vector(seq_len, util.get_device_of(inputs)).repeat(
+            (batch_size, 1)
+        )
+
+        start_offset = span[:, 0].unsqueeze(dim=1)
+        end_offset = span[:, 1].unsqueeze(dim=1)
+
+        left_mask = torch.lt(pos_range, start_offset).long()
+        middle_mask = (
+            torch.ge(pos_range, start_offset) * torch.le(pos_range, end_offset)
+        ).long()
+        right_mask = torch.gt(pos_range, end_offset).long()
+
+        offsets = start_offset * left_mask + end_offset * right_mask
 
         relative_positions = (
-            1 + self._n_position + position_range - offset.unsqueeze(dim=1)
+            1 + self._n_position + (pos_range - offsets) * (1 - middle_mask)
         )
 
         # mask padding so it won't receive a positional embedding

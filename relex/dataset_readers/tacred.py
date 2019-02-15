@@ -15,6 +15,20 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def normalize_glove(token):
+    mapping = {
+        "-LRB-": "(",
+        "-RRB-": ")",
+        "-LSB-": "[",
+        "-RSB-": "]",
+        "-LCB-": "{",
+        "-RCB-": "}",
+    }
+    if token in mapping:
+        token = mapping[token]
+    return token
+
+
 @DatasetReader.register("tacred")
 class TacredDatasetReader(DatasetReader):
     """
@@ -68,7 +82,7 @@ class TacredDatasetReader(DatasetReader):
             logger.info("Reading TACRED instances from json dataset at: %s", file_path)
             data = json.load(data_file)
             for example in data:
-                tokens = example["token"]
+                tokens = [normalize_glove(token) for token in example["token"]]
                 relation = example["relation"]
 
                 id_ = example["id"]
@@ -76,13 +90,15 @@ class TacredDatasetReader(DatasetReader):
                 head = (example["subj_start"], example["subj_end"])
                 tail = (example["obj_start"], example["obj_end"])
 
+                ner = example["stanford_ner"]
+                pos = example["stanford_pos"]
+
                 if self._masking_mode is not None:
-                    ner_labels = example['stanford_ner']
-                    tokens = self._apply_masking_mode(tokens, head, tail, ner_labels)
+                    tokens = self._apply_masking_mode(tokens, head, tail, ner)
 
                 text = " ".join(tokens)
 
-                yield self.text_to_instance(text, head, tail, id_, relation)
+                yield self.text_to_instance(text, head, tail, id_, relation, ner, pos)
 
     @overrides
     def text_to_instance(
@@ -92,10 +108,21 @@ class TacredDatasetReader(DatasetReader):
         tail: Tuple[int, int],
         id_: Optional[str] = None,
         relation: Optional[str] = None,
+        ner: List[str] = None,
+        pos: List[str] = None,
     ) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
 
         tokenized_text = self._tokenizer.tokenize(text)
+
+        if ner is not None:
+            for token, ent_type in zip(tokenized_text, ner):
+                token.ent_type_ = ent_type
+
+        if pos is not None:
+            for token, pos_tag in zip(tokenized_text, pos):
+                token.tag_ = pos_tag
+
         tokenized_text = tokenized_text[: self._max_len]
 
         head_start, head_end = head
@@ -118,22 +145,22 @@ class TacredDatasetReader(DatasetReader):
         return Instance(fields)
 
     def _apply_masking_mode(self, tokens, head, tail, ner_labels):
-        if self._masking_mode == 'NER':
-            head_replacement = f'__{ner_labels[head[0]]}__'
-            tail_replacement = f'__{ner_labels[tail[0]]}__'
-        elif self._masking_mode == 'Grammar':
-            head_replacement = '__SUB__'
-            tail_replacement = '__OBJ__'
-        elif self._masking_mode == 'NER+Grammar':
-            head_replacement = f'__{ner_labels[head[0]]}_SUB__'
-            tail_replacement = f'__{ner_labels[tail[0]]}_OBJ__'
-        elif self._masking_mode == 'UNK':
-            head_replacement = '__UNK__'
-            tail_replacement = '__UNK__'
+        if self._masking_mode == "NER":
+            head_replacement = f"__{ner_labels[head[0]]}__"
+            tail_replacement = f"__{ner_labels[tail[0]]}__"
+        elif self._masking_mode == "Grammar":
+            head_replacement = "__SUB__"
+            tail_replacement = "__OBJ__"
+        elif self._masking_mode == "NER+Grammar":
+            head_replacement = f"__{ner_labels[head[0]]}_SUB__"
+            tail_replacement = f"__{ner_labels[tail[0]]}_OBJ__"
+        elif self._masking_mode == "UNK":
+            head_replacement = "__UNK__"
+            tail_replacement = "__UNK__"
         else:
-            raise RuntimeError('Unknown masking mode provided')
+            raise RuntimeError("Unknown masking mode provided")
 
-        tokens[head[0]:head[1]+1] = [head_replacement] * (head[1]-head[0]+1)
-        tokens[tail[0]:tail[1]+1] = [tail_replacement] * (tail[1]-tail[0]+1)
+        tokens[head[0] : head[1] + 1] = [head_replacement] * (head[1] - head[0] + 1)
+        tokens[tail[0] : tail[1] + 1] = [tail_replacement] * (tail[1] - tail[0] + 1)
 
         return tokens

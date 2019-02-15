@@ -5,7 +5,6 @@ from relex.dataset_readers import TacredDatasetReader
 
 
 class TestTacredDatasetReader(AllenNlpTestCase):
-
     def test_read_from_file(self):
         MAX_LEN = 100
         reader = TacredDatasetReader(max_len=MAX_LEN)
@@ -44,7 +43,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
             "tail": (12, 12),
             "id": "e7798fb926b9403cfcd2",
             "label": "per:title",
-            "stanford_ner": [
+            "ner": [
                 "O",
                 "O",
                 "O",
@@ -70,8 +69,36 @@ class TestTacredDatasetReader(AllenNlpTestCase):
                 "O",
                 "O",
                 "O",
-                "O"
-            ]
+                "O",
+            ],
+            "pos": [
+                "IN",
+                "DT",
+                "JJ",
+                "NN",
+                ",",
+                "NNP",
+                "NNP",
+                "NNP",
+                "NNP",
+                "NNP",
+                "MD",
+                "VB",
+                "NN",
+                ",",
+                "VBG",
+                "NNP",
+                "NNP",
+                "WP",
+                "VBZ",
+                "VBG",
+                "TO",
+                "VB",
+                "DT",
+                "NN",
+                "NN",
+                ".",
+            ],
         }
 
         assert len(instances) == 3
@@ -80,6 +107,8 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
         tokens = fields["text"].tokens
         assert [t.text for t in tokens] == instance1["tokens"]
+        assert [t.ent_type_ for t in tokens] == instance1["ner"]
+        assert [t.tag_ for t in tokens] == instance1["pos"]
 
         assert fields["label"].label == instance1["label"]
         assert fields["head"].span_start == instance1["head"][0]
@@ -90,7 +119,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_ner_masking(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode='NER')
+        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER")
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
         expected_tokens = [
@@ -127,7 +156,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_ner_grammar_masking(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode='NER+Grammar')
+        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER+Grammar")
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
         expected_tokens = [
@@ -164,7 +193,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_grammar_masking(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode='Grammar')
+        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="Grammar")
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
         expected_tokens = [
@@ -201,7 +230,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_unknown_masking(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode='UNK')
+        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="UNK")
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
         expected_tokens = [
