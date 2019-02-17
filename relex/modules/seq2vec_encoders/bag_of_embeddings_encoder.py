@@ -51,7 +51,13 @@ class BagOfEmbeddings(Seq2VecEncoder):
         if self._projection_dim is not None:
             tokens = self._projection(tokens)
 
-        out = pool(tokens, mask.unsqueeze(-1), dim=1, pooling=self._pooling)
+        out = pool(
+            tokens,
+            mask.unsqueeze(-1),
+            dim=1,
+            pooling=self._pooling,
+            is_bidirectional=False,
+        )
 
         if self._activation is not None:
             out = self._activation(out)
