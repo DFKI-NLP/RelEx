@@ -1,9 +1,7 @@
 import torch
+import numpy as np
 from allennlp.nn import util
 from relex.modules.offset_embedders import OffsetEmbedder
-
-
-import numpy as np
 
 
 def position_encoding_init(n_position: int, embedding_dim: int):
