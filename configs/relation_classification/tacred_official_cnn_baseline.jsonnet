@@ -57,6 +57,7 @@ function (
       "num_filters": text_encoder_num_filters,
       "ngram_filter_sizes": text_encoder_ngram_filter_sizes,
     },
+    "word_dropout": 0.04,
     "encoding_dropout": 0.5,
     "classifier_feedforward": {
       "input_dim": classifier_feedforward_input_dim,

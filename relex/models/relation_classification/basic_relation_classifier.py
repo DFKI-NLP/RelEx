@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List, Any
 
 import numpy
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 from overrides import overrides
 import torch
 import torch.nn.functional as F
@@ -12,6 +13,8 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
+from torch.distributions import Bernoulli
+
 from relex.modules.offset_embedders import OffsetEmbedder
 from relex.metrics import F1Measure
 
@@ -50,6 +53,7 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
+        word_dropout: Optional[float] = None,
         encoding_dropout: Optional[float] = None,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
         offset_embedder_tail: Optional[OffsetEmbedder] = None,
@@ -64,6 +68,7 @@ class BasicRelationClassifier(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
+        self.word_dropout = word_dropout
         self.encoding_dropout = (
             torch.nn.Dropout(encoding_dropout) if encoding_dropout else None
         )
@@ -148,8 +153,19 @@ class BasicRelationClassifier(Model):
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
-        embedded_text = self.text_field_embedder(text)
         text_mask = util.get_text_field_mask(text)
+
+        if self.training and self.word_dropout is not None:
+            # Generate a binary mask with ones for dropped words
+            dropout_mask = Bernoulli(self.word_dropout).sample(text_mask.shape)
+            dropout_mask = dropout_mask.to(device=text_mask.device)
+            dropout_mask = dropout_mask.byte() & text_mask.byte()
+
+            # Set the dropped words to the OOV token index
+            oov_token_idx = self.vocab.get_token_index(DEFAULT_OOV_TOKEN)
+            text['tokens'].masked_fill_(dropout_mask, oov_token_idx)
+
+        embedded_text = self.text_field_embedder(text)
 
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
