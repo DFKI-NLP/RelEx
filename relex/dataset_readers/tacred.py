@@ -8,7 +8,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import LabelField, TextField, SpanField, MetadataField
 from allennlp.data.instance import Instance
-from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 
@@ -90,11 +90,14 @@ class TacredDatasetReader(DatasetReader):
                 head = (example["subj_start"], example["subj_end"])
                 tail = (example["obj_start"], example["obj_end"])
 
+                head_type = example["subj_type"]
+                tail_type = example["obj_type"]
+
                 ner = example["stanford_ner"]
                 pos = example["stanford_pos"]
 
                 if self._masking_mode is not None:
-                    tokens = self._apply_masking_mode(tokens, head, tail, ner)
+                    tokens = self._apply_masking_mode(tokens, head, tail, head_type, tail_type)
 
                 text = " ".join(tokens)
 
@@ -144,16 +147,16 @@ class TacredDatasetReader(DatasetReader):
 
         return Instance(fields)
 
-    def _apply_masking_mode(self, tokens, head, tail, ner_labels):
+    def _apply_masking_mode(self, tokens, head, tail, head_type, tail_type):
         if self._masking_mode == "NER":
-            head_replacement = f"__{ner_labels[head[0]]}__"
-            tail_replacement = f"__{ner_labels[tail[0]]}__"
+            head_replacement = f"__{head_type}__"
+            tail_replacement = f"__{tail_type}__"
         elif self._masking_mode == "Grammar":
             head_replacement = "__SUB__"
             tail_replacement = "__OBJ__"
         elif self._masking_mode == "NER+Grammar":
-            head_replacement = f"__{ner_labels[head[0]]}_SUB__"
-            tail_replacement = f"__{ner_labels[tail[0]]}_OBJ__"
+            head_replacement = f"__{head_type}_SUB__"
+            tail_replacement = f"__{tail_type}_OBJ__"
         elif self._masking_mode == "UNK":
             head_replacement = "__UNK__"
             tail_replacement = "__UNK__"
