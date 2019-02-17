@@ -99,6 +99,9 @@ class SemEval2010Task8DatasetReader(DatasetReader):
         head_start, head_end = head
         tail_start, tail_end = tail
 
+        head_end = head_end - 1
+        tail_end = tail_end - 1
+
         head_start = min(head_start, self._max_len - 1)
         head_end = min(head_end, self._max_len - 1)
         tail_start = min(tail_start, self._max_len - 1)
@@ -108,12 +111,8 @@ class SemEval2010Task8DatasetReader(DatasetReader):
         # SpanField expects an inclusive end index
         fields = {
             "text": text_tokens_field,
-            "head": SpanField(
-                head_start, head_end - 1, sequence_field=text_tokens_field
-            ),
-            "tail": SpanField(
-                tail_start, tail_end - 1, sequence_field=text_tokens_field
-            ),
+            "head": SpanField(head_start, head_end, sequence_field=text_tokens_field),
+            "tail": SpanField(tail_start, tail_end, sequence_field=text_tokens_field),
         }
 
         if id_ is not None:

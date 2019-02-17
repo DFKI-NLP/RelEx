@@ -97,7 +97,9 @@ class TacredDatasetReader(DatasetReader):
                 pos = example["stanford_pos"]
 
                 if self._masking_mode is not None:
-                    tokens = self._apply_masking_mode(tokens, head, tail, head_type, tail_type)
+                    tokens = self._apply_masking_mode(
+                        tokens, head, tail, head_type, tail_type
+                    )
 
                 text = " ".join(tokens)
 
@@ -130,6 +132,11 @@ class TacredDatasetReader(DatasetReader):
 
         head_start, head_end = head
         tail_start, tail_end = tail
+
+        head_start = min(head_start, self._max_len - 1)
+        head_end = min(head_end, self._max_len - 1)
+        tail_start = min(tail_start, self._max_len - 1)
+        tail_end = min(tail_end, self._max_len - 1)
 
         text_tokens_field = TextField(tokenized_text, self._token_indexers)
         # SpanField expects an inclusive end index
