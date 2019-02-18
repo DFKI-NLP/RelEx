@@ -1,6 +1,3 @@
-# brazenly stolen from: https://github.com/tkipf/pygcn/blob/master/pygcn/layers.py
-# and https://github.com/tkipf/pygcn/blob/master/pygcn/models.py
-
 import math
 import torch
 from overrides import overrides
@@ -14,6 +11,7 @@ from relex.modules.seq2vec_encoders.utils import pool
 class GraphConvolution(torch.nn.Module):
     """
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
+    Code taken from https://github.com/tkipf/pygcn/blob/master/pygcn/layers.py
     """
 
     def __init__(self, in_features: int, out_features: int, bias: bool = True):
