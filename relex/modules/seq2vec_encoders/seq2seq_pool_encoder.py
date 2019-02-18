@@ -1,6 +1,5 @@
 import torch
 from overrides import overrides
-from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from relex.modules.seq2vec_encoders.utils import pool
