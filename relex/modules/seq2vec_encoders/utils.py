@@ -94,8 +94,6 @@ def dep_heads_to_tree(
                 nodes[h - 1].add_child(nodes[i])
     else:
         # find dependency path
-        # subj_pos = [i for i in range(len_) if subj_pos[i] == 0]
-        # obj_pos = [i for i in range(len_) if obj_pos[i] == 0]
         head_start, head_end = head
         tail_start, tail_end = tail
         subj_pos = list(range(head_start, head_end + 1))

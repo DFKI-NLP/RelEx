@@ -1,9 +1,9 @@
 function (
   lr = 0.3, num_epochs = 100,
   word_dropout = 0.04,
-  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
-  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = 30,
-  offset_type = "relative", offset_embedding_dim = 30,
+  embedding_dim = 300, embedding_trainable = true, embedding_dropout = 0.5,
+  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = null,
+  offset_type = "relative", offset_embedding_dim = null,
   text_encoder_hidden_dim = 200, text_encoder_num_layers = 2, text_encoder_dropout = 0.5,
   text_encoder_pooling = "max",
   masking_mode = "NER+Grammar",
@@ -59,12 +59,11 @@ function (
     "use_adjacency": true,
     "word_dropout": word_dropout,
     "embedding_dropout": embedding_dropout,
-    "encoding_dropout": 0,
+    "encoding_dropout": 0.5,
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        // "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
-        "pretrained_file": "/home/christoph/Downloads/glove.840B.300d.txt",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": embedding_trainable,
       },
@@ -107,7 +106,7 @@ function (
       "num_layers": 3,
       "hidden_dims": [200, 200, num_classes],
       "activations": ["relu", "relu", "linear"],
-      "dropout": [0.5, 0.0, 0.0],
+      "dropout": [0.0, 0.0, 0.0],
     },
     // "regularizer": [
     //   ["text_encoder.*weight", {"type": "l2", "alpha": 1e-3}],

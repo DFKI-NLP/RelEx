@@ -168,7 +168,7 @@ class TacredDatasetReader(DatasetReader):
 
         if dep_heads is not None:
             tree = dep_heads_to_tree(
-                dep_heads, len(tokenized_text), head, tail, prune=False
+                dep_heads, len(tokenized_text), head, tail, prune=1
             )
             indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
             fields["adjacency"] = AdjacencyField(
