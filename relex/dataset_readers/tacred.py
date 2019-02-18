@@ -95,6 +95,7 @@ class TacredDatasetReader(DatasetReader):
 
                 ner = example["stanford_ner"]
                 pos = example["stanford_pos"]
+                dep = example["stanford_deprel"]
 
                 if self._masking_mode is not None:
                     tokens = self._apply_masking_mode(
@@ -103,7 +104,9 @@ class TacredDatasetReader(DatasetReader):
 
                 text = " ".join(tokens)
 
-                yield self.text_to_instance(text, head, tail, id_, relation, ner, pos)
+                yield self.text_to_instance(
+                    text, head, tail, id_, relation, ner, pos, dep
+                )
 
     @overrides
     def text_to_instance(
@@ -115,6 +118,7 @@ class TacredDatasetReader(DatasetReader):
         relation: Optional[str] = None,
         ner: List[str] = None,
         pos: List[str] = None,
+        dep: List[str] = None,
     ) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
 
@@ -127,6 +131,10 @@ class TacredDatasetReader(DatasetReader):
         if pos is not None:
             for token, pos_tag in zip(tokenized_text, pos):
                 token.tag_ = pos_tag
+
+        if dep is not None:
+            for token, dep_rel in zip(tokenized_text, dep):
+                token.dep_ = dep_rel
 
         tokenized_text = tokenized_text[: self._max_len]
 

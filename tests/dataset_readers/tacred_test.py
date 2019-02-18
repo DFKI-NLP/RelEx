@@ -99,6 +99,34 @@ class TestTacredDatasetReader(AllenNlpTestCase):
                 "NN",
                 ".",
             ],
+            "dep": [
+                "case",
+                "det",
+                "amod",
+                "nmod",
+                "punct",
+                "compound",
+                "compound",
+                "compound",
+                "compound",
+                "nsubj",
+                "aux",
+                "ROOT",
+                "xcomp",
+                "punct",
+                "xcomp",
+                "compound",
+                "dobj",
+                "nsubj",
+                "aux",
+                "acl:relcl",
+                "mark",
+                "xcomp",
+                "det",
+                "compound",
+                "dobj",
+                "punct",
+            ],
         }
 
         assert len(instances) == 3
@@ -109,6 +137,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
         assert [t.text for t in tokens] == instance1["tokens"]
         assert [t.ent_type_ for t in tokens] == instance1["ner"]
         assert [t.tag_ for t in tokens] == instance1["pos"]
+        assert [t.dep_ for t in tokens] == instance1["dep"]
 
         assert fields["label"].label == instance1["label"]
         assert fields["head"].span_start == instance1["head"][0]
