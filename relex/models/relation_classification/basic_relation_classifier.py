@@ -1,11 +1,11 @@
 from typing import Dict, Optional, List, Any
 
-import numpy
-from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
-from overrides import overrides
 import torch
+import numpy
+from overrides import overrides
 import torch.nn.functional as F
 
+from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 from allennlp.common.checks import ConfigurationError
 from allennlp.data import Vocabulary
 from allennlp.modules import FeedForward, Seq2VecEncoder, TextFieldEmbedder
@@ -13,9 +13,9 @@ from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn import util
 from allennlp.training.metrics import CategoricalAccuracy
-from torch.distributions import Bernoulli
 
 from relex.modules.offset_embedders import OffsetEmbedder
+from relex.modules.nn import WordDropout
 from relex.metrics import F1Measure
 
 
@@ -53,8 +53,9 @@ class BasicRelationClassifier(Model):
         text_field_embedder: TextFieldEmbedder,
         text_encoder: Seq2VecEncoder,
         classifier_feedforward: FeedForward,
-        word_dropout: Optional[float] = None,
-        encoding_dropout: Optional[float] = None,
+        word_dropout: Optional[float] = 0,
+        embedding_dropout: Optional[float] = 0,
+        encoding_dropout: Optional[float] = 0,
         offset_embedder_head: Optional[OffsetEmbedder] = None,
         offset_embedder_tail: Optional[OffsetEmbedder] = None,
         initializer: InitializerApplicator = InitializerApplicator(),
@@ -68,9 +69,15 @@ class BasicRelationClassifier(Model):
         self.text_field_embedder = text_field_embedder
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
-        self.word_dropout = word_dropout
+
+        self.word_dropout = WordDropout(
+            word_dropout, fill_idx=vocab.get_token_index(DEFAULT_OOV_TOKEN)
+        )
+        self.embedding_dropout = (
+            torch.nn.Dropout(encoding_dropout) if embedding_dropout > 0 else lambda x: x
+        )
         self.encoding_dropout = (
-            torch.nn.Dropout(encoding_dropout) if encoding_dropout else None
+            torch.nn.Dropout(encoding_dropout) if encoding_dropout > 0 else lambda x: x
         )
         self.classifier_feedforward = classifier_feedforward
         self.offset_embedder_head = offset_embedder_head
@@ -155,17 +162,11 @@ class BasicRelationClassifier(Model):
         """
         text_mask = util.get_text_field_mask(text)
 
-        if self.training and self.word_dropout is not None:
-            # Generate a binary mask with ones for dropped words
-            dropout_mask = Bernoulli(self.word_dropout).sample(text_mask.shape)
-            dropout_mask = dropout_mask.to(device=text_mask.device)
-            dropout_mask = dropout_mask.byte() & text_mask.byte()
-
-            # Set the dropped words to the OOV token index
-            oov_token_idx = self.vocab.get_token_index(DEFAULT_OOV_TOKEN)
-            text['tokens'].masked_fill_(dropout_mask, oov_token_idx)
+        text["tokens"] = self.word_dropout(text["tokens"], text_mask)
 
         embedded_text = self.text_field_embedder(text)
+
+        embedded_text = self.embedding_dropout(embedded_text)
 
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
@@ -176,7 +177,6 @@ class BasicRelationClassifier(Model):
             embeddings.append(
                 self.offset_embedder_tail(embedded_text, text_mask, span=tail)
             )
-
         if len(embeddings) > 1:
             embedded_text = torch.cat(embeddings, dim=-1)
         else:
@@ -184,8 +184,7 @@ class BasicRelationClassifier(Model):
 
         encoded_text = self.text_encoder(embedded_text, text_mask)
 
-        if self.encoding_dropout is not None:
-            encoded_text = self.encoding_dropout(encoded_text)
+        encoded_text = self.encoding_dropout(encoded_text)
 
         logits = self.classifier_feedforward(encoded_text)
 

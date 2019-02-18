@@ -1,6 +1,7 @@
 function (
-  lr = 1e-3, num_epochs = 50,
-  embedding_dim = 300, embedding_trainable = false,
+  lr = 0.1, num_epochs = 50,
+  word_dropout = 0.04,
+  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.0,
   ner_embedding_dim = 30, pos_embedding_dim = 30,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_num_filters = 500, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
@@ -8,7 +9,7 @@ function (
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
-  max_len = 200) {
+  max_len = 100) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
@@ -49,11 +50,13 @@ function (
     "f1_average": "micro",
     "ignore_label": "no_relation",
     "verbose_metrics": false,
+    "word_dropout": word_dropout,
+    "embedding_dropout": embedding_dropout,
     "encoding_dropout": text_encoder_dropout,
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.300d.txt.gz",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": embedding_trainable,
       },
@@ -83,6 +86,7 @@ function (
       "embedding_dim": text_encoder_input_dim,
       "num_filters": text_encoder_num_filters,
       "ngram_filter_sizes": text_encoder_ngram_filter_sizes,
+      "conv_layer_activation": "tanh",
     },
     "classifier_feedforward": {
       "input_dim": classifier_feedforward_input_dim,
@@ -91,9 +95,9 @@ function (
       "activations": ["linear"],
       "dropout": [0.0],
     },
-    // "regularizer": [
-    //   ["text_encoder.conv_layer_.*weight", {"type": "l2", "alpha": 1e-3}],
-    // ],
+    "regularizer": [
+      ["text_encoder.conv_layer_.*weight", {"type": "l2", "alpha": 1e-3}],
+    ],
   },
 
   "iterator": {
@@ -113,17 +117,16 @@ function (
     "patience": 10,
     "cuda_device": 0,
     "num_serialized_models_to_keep": 1,
-    // "grad_clipping": 5.0,
+    "grad_clipping": 5.0,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
-      "type": "adam",
+      "type": "adagrad",
       "lr": lr,
     },
     "learning_rate_scheduler": {
-      "type": "reduce_on_plateau",
-      "factor": 0.9,
-      "mode": "max",
-      "patience": 5
+      "type": "multi_step",
+      "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+      "gamma": 0.9,
     },
   }
 }

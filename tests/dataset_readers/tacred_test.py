@@ -117,6 +117,31 @@ class TestTacredDatasetReader(AllenNlpTestCase):
         assert fields["tail"].span_end == instance1["tail"][1]
         assert fields["metadata"]["id"] == instance1["id"]
 
+    def test_max_len(self):
+        MAX_LEN = 10
+        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER")
+        instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
+
+        fields = instances[0].fields
+        tokens = fields["text"].tokens
+        head_span = (fields["head"].span_start, fields["head"].span_end)
+        tail_span = (fields["tail"].span_start, fields["tail"].span_end)
+
+        assert [t.text for t in tokens] == [
+            "At",
+            "the",
+            "same",
+            "time",
+            ",",
+            "Chief",
+            "Financial",
+            "Officer",
+            "__PERSON__",
+            "__PERSON__",
+        ]
+        assert head_span == (8, 9)
+        assert tail_span == (9, 9)
+
     def test_ner_masking(self):
         MAX_LEN = 100
         reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER")
@@ -135,7 +160,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
             "__PERSON__",
             "will",
             "become",
-            "__O__",
+            "__TITLE__",
             ",",
             "succeeding",
             "Stephen",
@@ -172,7 +197,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
             "__PERSON_SUB__",
             "will",
             "become",
-            "__O_OBJ__",
+            "__TITLE_OBJ__",
             ",",
             "succeeding",
             "Stephen",

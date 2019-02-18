@@ -13,6 +13,7 @@ class RelativeOffsetEmbedder(OffsetEmbedder):
         self._embedding = torch.nn.Embedding(
             2 * n_position + 1, embedding_dim, padding_idx=0
         )
+        torch.nn.init.xavier_uniform_(self._embedding.weight.data)
         self._embedding.weight.data[self._embedding.padding_idx].fill_(0)
 
     def get_output_dim(self) -> int:
