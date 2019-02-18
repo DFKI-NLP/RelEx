@@ -1,10 +1,10 @@
 function (
-  lr = 0.01, num_epochs = 30,
+  lr = 0.3, num_epochs = 100,
   word_dropout = 0.04,
-  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.0,
-  ner_embedding_dim = null, pos_embedding_dim = null, dep_embedding_dim = null,
-  offset_type = "relative", offset_embedding_dim = null,
-  text_encoder_hidden_dim = 500, text_encoder_num_layers = 2, text_encoder_dropout = 0.5,
+  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
+  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = 30,
+  offset_type = "relative", offset_embedding_dim = 30,
+  text_encoder_hidden_dim = 200, text_encoder_num_layers = 2, text_encoder_dropout = 0.5,
   text_encoder_pooling = "max",
   masking_mode = "NER+Grammar",
   dataset = "tacred",
@@ -104,13 +104,13 @@ function (
     },
     "classifier_feedforward": {
       "input_dim": classifier_feedforward_input_dim,
-      "num_layers": 1,
-      "hidden_dims": [num_classes],
-      "activations": ["linear"],
-      "dropout": [0.0],
+      "num_layers": 3,
+      "hidden_dims": [200, 200, num_classes],
+      "activations": ["relu", "relu", "linear"],
+      "dropout": [0.5, 0.0, 0.0],
     },
     // "regularizer": [
-    //   ["text_encoder.conv_layer_.*weight", {"type": "l2", "alpha": 1e-3}],
+    //   ["text_encoder.*weight", {"type": "l2", "alpha": 1e-3}],
     // ],
   },
 
@@ -131,22 +131,17 @@ function (
     "patience": 10,
     "cuda_device": 0,
     "num_serialized_models_to_keep": 1,
-    // "grad_clipping": 5.0,
+    "grad_clipping": 5.0,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
-      "type": "adagrad",
+      "type": "sgd",
       "lr": lr,
     },
     "learning_rate_scheduler": {
-      "type": "multi_step",
-      "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-      "gamma": 0.9,
+      "type": "reduce_on_plateau",
+      "factor": 0.9,
+      "mode": "max",
+      "patience": 1
     },
-    // "learning_rate_scheduler": {
-    //   "type": "reduce_on_plateau",
-    //   "factor": 0.9,
-    //   "mode": "max",
-    //   "patience": 5
-    // },
   }
 }

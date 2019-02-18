@@ -34,17 +34,16 @@ class GraphConvolution(torch.nn.Module):
             self.bias.data.uniform_(-stdv, stdv)
 
     def forward(self, x: torch.Tensor, adjacency: torch.Tensor) -> torch.Tensor:
-        # print("x:", x.shape)
-        # print("adjacency:", adjacency.shape)
-        # print("weight:", self.weight.shape)
         batch_size, seq_len, _ = x.size()
 
         x = x.view(batch_size * seq_len, -1)
 
         support = torch.mm(x, self.weight)
         support = support.view(batch_size, seq_len, -1)
+
         # output = torch.spmm(adjacency, support)
         output = torch.bmm(adjacency, support)
+
         if self.bias is not None:
             return output + self.bias
         else:
@@ -113,10 +112,14 @@ class GCN(Seq2VecEncoder):
             mask = mask.unsqueeze(-1)
             x = x * mask.float()
 
+        denom = adjacency.sum(dim=2, keepdim=True) + 1
+
         output = x
         for i in range(len(self._gcn_layers)):
             gcn_layer_i = getattr(self, f"gcn_layer_{i}")
-            output = self.dropout(self._activation(gcn_layer_i(output, adjacency)))
+            output = self._activation(gcn_layer_i(output, adjacency) / denom)
+            if i < len(self._gcn_layers) - 1:
+                output = self.dropout(output)
 
         batch_size, seq_len, _ = x.size()
 

@@ -74,7 +74,7 @@ def dep_heads_to_tree(
     length: int,
     head: Tuple[int, int],
     tail: Tuple[int, int],
-    prune: int = 0,
+    prune: int = -1,
 ) -> Tree:
     """
     Convert a sequence of dependency head indexes into a Tree.
