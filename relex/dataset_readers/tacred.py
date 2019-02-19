@@ -6,11 +6,21 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import LabelField, TextField, SpanField, MetadataField
+from allennlp.data.fields import (
+    LabelField,
+    TextField,
+    SpanField,
+    MetadataField,
+    AdjacencyField,
+)
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
+from relex.modules.seq2vec_encoders.utils import (
+    dep_heads_to_tree,
+    tree_to_adjacency_list,
+)
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -96,6 +106,7 @@ class TacredDatasetReader(DatasetReader):
                 ner = example["stanford_ner"]
                 pos = example["stanford_pos"]
                 dep = example["stanford_deprel"]
+                dep_heads = example["stanford_head"]
 
                 if self._masking_mode is not None:
                     tokens = self._apply_masking_mode(
@@ -105,7 +116,7 @@ class TacredDatasetReader(DatasetReader):
                 text = " ".join(tokens)
 
                 yield self.text_to_instance(
-                    text, head, tail, id_, relation, ner, pos, dep
+                    text, head, tail, id_, relation, ner, pos, dep, dep_heads
                 )
 
     @overrides
@@ -119,6 +130,7 @@ class TacredDatasetReader(DatasetReader):
         ner: List[str] = None,
         pos: List[str] = None,
         dep: List[str] = None,
+        dep_heads: List[int] = None,
     ) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
 
@@ -153,6 +165,15 @@ class TacredDatasetReader(DatasetReader):
             "head": SpanField(head_start, head_end, sequence_field=text_tokens_field),
             "tail": SpanField(tail_start, tail_end, sequence_field=text_tokens_field),
         }
+
+        if dep_heads is not None:
+            tree = dep_heads_to_tree(
+                dep_heads, len(tokenized_text), head, tail, prune=1
+            )
+            indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
+            fields["adjacency"] = AdjacencyField(
+                indices, sequence_field=text_tokens_field, padding_value=0
+            )
 
         if id_ is not None:
             fields["metadata"] = MetadataField({"id": id_})
