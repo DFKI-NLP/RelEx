@@ -66,8 +66,7 @@ function (
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        // "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-        "pretrained_file": "/home/christoph/Downloads/glove.840B.300d.txt",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": embedding_trainable,
       },
