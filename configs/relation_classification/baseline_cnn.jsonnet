@@ -1,5 +1,6 @@
 function (
   lr = 1, num_epochs = 50,
+  word_dropout = 0.04,
   embedding_dim = 300, embedding_trainable = true, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 50,
@@ -50,6 +51,7 @@ function (
     "type": "basic_relation_classifier",
     "f1_average": "macro",
     "verbose_metrics": false,
+    "word_dropout": word_dropout,
     "embedding_dropout": embedding_dropout,
     "encoding_dropout": text_encoder_dropout,
     "text_field_embedder": {
