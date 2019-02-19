@@ -36,6 +36,8 @@ class Tree(object):
         self.parent = None
         self.num_children = 0
         self.children = []
+        self.head = None
+        self.dep_label = None
 
     def add_child(self, child):
         child.parent = self
@@ -50,6 +52,18 @@ class Tree(object):
             count += self.children[i].size()
         self._size = count
         return self._size
+
+    def is_root(self):
+        return self.head == 0
+
+    def parent(self):
+        return self.parent
+
+    def parent_idx(self):
+        return self.head
+
+    def dep_label(self):
+        return self.dep_label
 
     def depth(self):
         if hasattr(self, "_depth"):
@@ -77,6 +91,7 @@ def dep_heads_to_tree(
     head: Tuple[int, int],
     tail: Tuple[int, int],
     prune: int = -1,
+    dep_labels: List[str] = None,
 ) -> Tree:
     """
     Convert a sequence of dependency head indexes into a Tree.
@@ -89,6 +104,9 @@ def dep_heads_to_tree(
         for i in range(len(nodes)):
             h = dep_heads[i]
             nodes[i].idx = i
+            nodes[i].head = dep_heads[i]
+            if dep_labels is not None:
+                nodes[i].dep_label = dep_labels[i]
             nodes[i].dist = -1  # just a filler
             if h == 0:
                 root = nodes[i]
@@ -171,6 +189,9 @@ def dep_heads_to_tree(
             h = dep_heads[i]
             nodes[i].idx = i
             nodes[i].dist = dist[i]
+            nodes[i].head = dep_heads[i]
+            if dep_labels is not None:
+                nodes[i].dep_label = dep_labels[i]
             if h > 0 and i != highest_node:
                 assert nodes[h - 1] is not None
                 nodes[h - 1].add_child(nodes[i])
