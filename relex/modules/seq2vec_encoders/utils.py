@@ -28,6 +28,8 @@ def pool(
 class Tree(object):
     """
     Reused tree object from stanfordnlp/treelstm.
+    Code taken from
+    https://github.com/qipeng/gcn-over-pruned-trees/blob/master/model/tree.py
     """
 
     def __init__(self):
