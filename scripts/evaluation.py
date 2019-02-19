@@ -4,7 +4,7 @@ from relex.evaluation import tacred_evaluation
 
 
 def _get_parser():
-    parser = argparse.ArgumentParser(description="Run tuna")
+    parser = argparse.ArgumentParser(description="Run evaluation")
 
     parser.add_argument(
         "--model-dir",
