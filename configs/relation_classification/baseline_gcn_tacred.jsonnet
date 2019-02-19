@@ -10,7 +10,7 @@ function (
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
-  max_len = 100) {
+  max_len = 100, run=1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
@@ -26,6 +26,10 @@ function (
   local classifier_feedforward_input_dim = text_encoder_hidden_dim * 3,
 
   local num_classes = if (dataset == "semeval2010_task8") then 19 else 42,
+
+  "random_seed": 13370 * run,
+  "numpy_seed": 1337 * run,
+  "pytorch_seed": 133 * run,
 
   "dataset_reader": {
     "type": dataset,
