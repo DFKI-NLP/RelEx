@@ -43,7 +43,7 @@ class Tree(object):
         self.children.append(child)
 
     def size(self):
-        if getattr(self, "_size"):
+        if hasattr(self, "_size"):
             return self._size
         count = 1
         for i in range(self.num_children):
@@ -52,7 +52,7 @@ class Tree(object):
         return self._size
 
     def depth(self):
-        if getattr(self, "_depth"):
+        if hasattr(self, "_depth"):
             return self._depth
         count = 0
         if self.num_children > 0:
