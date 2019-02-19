@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+import re
 import csv
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile
@@ -16,6 +17,42 @@ def _write_id_label_file(file_path: str, ids: List[str], labels: List[str]) -> N
             writer.writerow(row)
 
 
+PRECISION_REGEX = r"P =\s*([0-9]{1,2}\.[0-9]{2})%"
+RECALL_REGEX = r"R =\s*([0-9]{1,2}\.[0-9]{2})%"
+F1_REGEX = r"F1 =\s*([0-9]{1,2}\.[0-9]{2})%"
+
+OFFICIAL_RESULT_REGEX = (
+    r"\(9\+1\)-WAY EVALUATION TAKING DIRECTIONALITY INTO ACCOUNT -- OFFICIAL"
+)
+RESULT_LINE_REGEX = r"MACRO-averaged result \(excluding Other\):\n((.*\n){1})"
+
+
+def prec_rec_f1_from_report(report):
+    official_result_match = re.search(OFFICIAL_RESULT_REGEX, report)
+
+    if official_result_match:
+        result_start = official_result_match.span(0)[1]
+        match = re.search(RESULT_LINE_REGEX, report[result_start:])
+
+        precision = None
+        recall = None
+        f1 = None
+        if match:
+            result_line = match.group(1)
+            precision_match = re.search(PRECISION_REGEX, result_line)
+            recall_match = re.search(RECALL_REGEX, result_line)
+            f1_match = re.search(F1_REGEX, result_line)
+
+            if precision_match:
+                precision = float(precision_match.group(1))
+            if recall_match:
+                recall = float(recall_match.group(1))
+            if f1_match:
+                f1 = float(f1_match.group(1))
+
+    return precision, recall, f1
+
+
 def evaluate(
     model_dir: str,
     test_file: str,
@@ -26,11 +63,6 @@ def evaluate(
     weights_file: Optional[str] = None,
     batch_size: int = 16,
 ) -> str:
-    # load predictor from archive in model dir
-    # load test file via dataset loader from test file
-    # predict all instances
-    # compute and output official evaluation script result
-
     predictor = load_predictor(
         model_dir, predictor_name, cuda_device, archive_filename, weights_file
     )
@@ -54,4 +86,5 @@ def evaluate(
     )
 
     report = p.stdout
-    return report
+    print(report)
+    return prec_rec_f1_from_report(report)
