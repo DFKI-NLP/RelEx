@@ -1,12 +1,12 @@
 function (
-  lr = 0.1, num_epochs = 50,
+  lr = 1, num_epochs = 50,
   word_dropout = 0.00,
   uncased = false,
   embedding_dim = 0, embedding_trainable = false, embedding_dropout = 0.0,
   ner_embedding_dim = null, pos_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_num_filters = 500, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
-  masking_mode = "NER+Grammar",
+  masking_mode = "NER_NL",
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
@@ -151,9 +151,15 @@ function (
       "lr": lr,
     },
     "learning_rate_scheduler": {
-      "type": "multi_step",
-      "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-      "gamma": 0.9,
+      "type": "reduce_on_plateau",
+      "factor": 0.9,
+      "mode": "max",
+      "patience": 1
     },
+    // "learning_rate_scheduler": {
+    //   "type": "multi_step",
+    //   "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    //   "gamma": 0.9,
+    // },
   }
 }
