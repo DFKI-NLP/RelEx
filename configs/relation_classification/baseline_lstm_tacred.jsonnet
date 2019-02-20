@@ -10,7 +10,7 @@ function (
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
-  max_len = 100, run=1) {
+  max_len = 100, run = 1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
