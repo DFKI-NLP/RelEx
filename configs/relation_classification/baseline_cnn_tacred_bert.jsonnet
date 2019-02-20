@@ -18,6 +18,8 @@ function (
 
   local pretrained_bert_model = if uncased then "bert-base-uncased" else "bert-base-cased",
 
+  local contextualized_embedding_dim = 768,
+
   local text_encoder_input_dim = embedding_dim  
                                  + contextualized_embedding_dim
                                  + (if use_offset_embeddings then 2 * offset_embedding_dim else 0) 
