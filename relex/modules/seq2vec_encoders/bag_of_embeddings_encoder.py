@@ -9,7 +9,7 @@ from allennlp.nn.activations import Activation
 from relex.modules.seq2vec_encoders.utils import pool
 
 
-@Seq2VecEncoder.register("bag_of_embeddings")
+@Seq2VecEncoder.register("bag_of_embeddings_pool")
 class BagOfEmbeddings(Seq2VecEncoder):
     """
     """
