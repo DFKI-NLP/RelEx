@@ -3,7 +3,7 @@ function (
   word_dropout = 0.00,
   uncased = false,
   embedding_dim = 0, embedding_trainable = false, embedding_dropout = 0.0,
-  ner_embedding_dim = 30, pos_embedding_dim = 30,
+  ner_embedding_dim = null, pos_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_num_filters = 500, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
   masking_mode = "NER+Grammar",
