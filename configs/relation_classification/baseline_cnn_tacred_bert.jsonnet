@@ -73,6 +73,8 @@ function (
       "allow_unmatched_keys": true,
       "embedder_to_indexer_map": {
         "tokens": ["tokens", "tokens-offsets"],
+        [if use_ner_embeddings then "ner_tokens"]: ["ner_tokens"],
+        [if use_pos_embeddings then "pos_tokens"]: ["pos_tokens"],
         // "tokens": ["tokens"],
       },
       // "tokens": {
