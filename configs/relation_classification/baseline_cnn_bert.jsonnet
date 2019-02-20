@@ -1,7 +1,8 @@
 function (
   lr = 1, num_epochs = 50,
-  word_dropout = 0.04,
-  embedding_dim = 300, embedding_trainable = true, embedding_dropout = 0.5,
+  word_dropout = 0.00,
+  uncased = false,
+  embedding_dim = 0, embedding_trainable = true, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 50,
   text_encoder_num_filters = 150, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
@@ -14,7 +15,7 @@ function (
   local use_ner_embeddings = (ner_embedding_dim != null),
   local use_pos_embeddings = (pos_embedding_dim != null),
 
-  local pretrained_bert_model = "bert-base-uncased",
+  local pretrained_bert_model = if uncased then "bert-base-uncased" else "bert-base-cased",
 
   local contextualized_embedding_dim = 768,
 
@@ -36,14 +37,14 @@ function (
     "type": dataset,
     "max_len": max_len,
     "token_indexers": {
+      // "tokens": {
+      //   "type": "single_id",
+      //   "lowercase_tokens": true,
+      // },
       "tokens": {
-        "type": "single_id",
-        "lowercase_tokens": true,
-      },
-      "bert": {
         "type": "bert-pretrained",
         "pretrained_model": pretrained_bert_model,
-        "do_lowercase": true,
+        "do_lowercase": uncased,
         "use_starting_offsets": true,
       },
       [if use_ner_embeddings then "ner_tokens"]: {
@@ -68,16 +69,16 @@ function (
     "text_field_embedder": {
       "allow_unmatched_keys": true,
       "embedder_to_indexer_map": {
-        "bert": ["bert", "bert-offsets"],
-        "tokens": ["tokens"],
+        "tokens": ["tokens", "tokens-offsets"],
+        // "tokens": ["tokens"],
       },
+      // "tokens": {
+      //   "type": "embedding",
+      //   "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+      //   "embedding_dim": embedding_dim,
+      //   "trainable": embedding_trainable,
+      // },
       "tokens": {
-        "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-        "embedding_dim": embedding_dim,
-        "trainable": embedding_trainable,
-      },
-      "bert": {
         "type": "bert-pretrained",
         "pretrained_model": pretrained_bert_model,
       },

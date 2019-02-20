@@ -71,8 +71,10 @@ class BasicRelationClassifier(Model):
         self.num_classes = self.vocab.get_vocab_size("labels")
         self.text_encoder = text_encoder
 
-        self.word_dropout = WordDropout(
-            word_dropout, fill_idx=vocab.get_token_index(DEFAULT_OOV_TOKEN)
+        self.word_dropout = (
+            WordDropout(word_dropout, fill_idx=vocab.get_token_index(DEFAULT_OOV_TOKEN))
+            if word_dropout > 0
+            else lambda x, m: x
         )
         self.embedding_dropout = (
             torch.nn.Dropout(encoding_dropout) if embedding_dropout > 0 else lambda x: x
@@ -165,7 +167,9 @@ class BasicRelationClassifier(Model):
         """
         text_mask = util.get_text_field_mask(text)
 
-        text["tokens"] = self.word_dropout(text["tokens"], text_mask)
+        # TODO: make this generic
+        if "tokens" in text:
+            text["tokens"] = self.word_dropout(text["tokens"], text_mask)
 
         embedded_text = self.text_field_embedder(text)
 
