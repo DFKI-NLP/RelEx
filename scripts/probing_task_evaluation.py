@@ -10,6 +10,27 @@ from relex.predictors.utils import load_predictor
 logger = logging.getLogger(__name__)
 
 
+ALL_PROBING_TASKS = [
+    "Length",
+    "EntityDistance",
+    "ArgumentOrder",
+    "EntityExistsBetweenHeadTail",
+    "EntityCountORGBetweenHeadTail",
+    "EntityCountPERBetweenHeadTail",
+    "EntityCountDATEBetweenHeadTail",
+    "EntityCountMISCBetweenHeadTail",
+    "EntityCountLOCBetweenHeadTail",
+    "PosTagHeadLeft",
+    "PosTagHeadRight",
+    "PosTagTailLeft",
+    "PosTagTailRight",
+    "ArgTypeHead",
+    "ArgTypeTail",
+    "TreeDepth",
+    "SDPTreeDepth",
+]
+
+
 def _get_parser():
     parser = argparse.ArgumentParser(description="Run evaluation on probing tasks")
 
@@ -112,7 +133,7 @@ def main():
             "epoch_size": 4,
         }
 
-    tasks = ["PosTagHeadRight"]
+    tasks = ALL_PROBING_TASKS
 
     logger.info(f"Parameters: {json.dumps(params, indent=4, sort_keys=True)}")
     logger.info(f"Tasks: {tasks}")
