@@ -1,5 +1,6 @@
 function (
   lr = 1, num_epochs = 50,
+  word_dropout = 0.04,
   embedding_dim = 300, embedding_trainable = true, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 50,
@@ -7,7 +8,7 @@ function (
   dataset = "semeval2010_task8",
   train_data_path = "../relex-data/semeval_2010_task_8/train.jsonl",
   validation_data_path = "../relex-data/semeval_2010_task_8/dev.jsonl",
-  max_len = 90) {
+  max_len = 90, run=1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
@@ -21,6 +22,10 @@ function (
   local classifier_feedforward_input_dim = text_encoder_num_filters * std.length(text_encoder_ngram_filter_sizes),
 
   local num_classes = if (dataset == "semeval2010_task8") then 19 else 42,
+
+  "random_seed": 13370 * run,
+  "numpy_seed": 1337 * run,
+  "pytorch_seed": 133 * run,
 
   "dataset_reader": {
     "type": dataset,
@@ -46,6 +51,7 @@ function (
     "type": "basic_relation_classifier",
     "f1_average": "macro",
     "verbose_metrics": false,
+    "word_dropout": word_dropout,
     "embedding_dropout": embedding_dropout,
     "encoding_dropout": text_encoder_dropout,
     "text_field_embedder": {
