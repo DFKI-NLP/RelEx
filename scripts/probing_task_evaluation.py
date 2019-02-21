@@ -7,7 +7,7 @@ import relex
 import reval
 from relex.predictors.utils import load_predictor
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
@@ -67,7 +67,7 @@ def _get_parser():
         "--batch-size", type=int, default=128, help="batch size to use for predictions"
     )
     parser.add_argument(
-        "--cuda-device", type=int, default=-1, help="a cuda device to load the model on"
+        "--cuda-device", type=int, default=0, help="a cuda device to load the model on"
     )
     parser.add_argument("--prototyping", action="store_true")
 
@@ -77,6 +77,14 @@ def _get_parser():
 def main():
     parser = _get_parser()
     args = parser.parse_args()
+
+    predictor = load_predictor(
+        args.model_dir,
+        args.predictor,
+        args.cuda_device,
+        archive_filename="model.tar.gz",
+        weights_file=None,
+    )
 
     def prepare(params, samples):
         pass
@@ -100,14 +108,6 @@ def main():
         results = predictor.predict_batch_json(inputs)
         sent_embeddings = np.array([result["input_rep"] for result in results])
         return sent_embeddings
-
-    predictor = load_predictor(
-        args.model_dir,
-        args.predictor,
-        args.cuda_device,
-        archive_filename="model.tar.gz",
-        weights_file=None,
-    )
 
     if args.prototyping:
         params = {
