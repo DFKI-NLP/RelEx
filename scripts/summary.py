@@ -122,10 +122,10 @@ def main():
 
     summary = experiment_summary(args.experiment_dir, scorer)
 
-    logger.info(f"Experiment Summary:\n{json.dumps(summary, indent=4, sort_keys=True)}")
+    logger.info(f"Experiment Summary: {json.dumps(summary, indent=4, sort_keys=True)}")
 
     with open(os.path.join(args.experiment_dir, "summary.json"), "w") as summary_f:
-        json.dump(summary, summary_f)
+        json.dump(summary, summary_f, indent=4, sort_keys=True)
 
 
 if __name__ == "__main__":
