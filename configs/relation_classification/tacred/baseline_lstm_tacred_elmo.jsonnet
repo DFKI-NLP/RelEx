@@ -20,6 +20,7 @@ function (
   local contextualized_embedding_dim = 1024,
 
   local text_encoder_input_dim = embedding_dim  
+                                 + contextualized_embedding_dim
                                  + (if use_offset_embeddings then 2 * offset_embedding_dim else 0) 
                                  + (if use_ner_embeddings then ner_embedding_dim else 0)
                                  + (if use_pos_embeddings then pos_embedding_dim else 0)
