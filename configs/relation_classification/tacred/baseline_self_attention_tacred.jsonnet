@@ -1,26 +1,22 @@
 function (
-  lr = 0.3, num_epochs = 100,
+  lr = 1e-4, num_epochs = 100,
   word_dropout = 0.00,
-  uncased = false,
   embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
-  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = null,
-  offset_type = "relative", offset_embedding_dim = null,
-  text_encoder_hidden_dim = 200, text_encoder_num_layers = 2, text_encoder_dropout = 0.5,
-  text_encoder_pooling = "max",
+  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = 30,
+  offset_type = "relative", offset_embedding_dim = 30,
+  text_encoder_hidden_dim = 256, text_encoder_projection_dim = 256, text_encoder_feedforward_hidden_dim = 512,
+  text_encoder_num_layers = 8, text_encoder_num_heads = 8, text_encoder_dropout = 0.1, text_encoder_resid_dropout = 0.2,
+  textn_encoder_attn_dropout = 0.1, text_encoder_pooling = "max",
   masking_mode = "NER+Grammar",
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
   validation_data_path = "../relex-data/tacred/dev.json",
-  max_len = 100, run = 1) {
+  max_len = 100, run=1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
   local use_pos_embeddings = (pos_embedding_dim != null),
   local use_dep_embeddings = (dep_embedding_dim != null),
-
-  local pretrained_bert_model = if uncased then "bert-base-uncased" else "bert-base-cased",
-
-  local contextualized_embedding_dim = 768,
 
   local text_encoder_input_dim = embedding_dim  
                                  + (if use_offset_embeddings then 2 * offset_embedding_dim else 0) 
@@ -28,7 +24,7 @@ function (
                                  + (if use_pos_embeddings then pos_embedding_dim else 0)
                                  + (if use_dep_embeddings then dep_embedding_dim else 0),
 
-  local classifier_feedforward_input_dim = text_encoder_hidden_dim * 3,
+  local classifier_feedforward_input_dim = text_encoder_hidden_dim,
 
   local num_classes = if (dataset == "semeval2010_task8") then 19 else 42,
 
@@ -41,15 +37,9 @@ function (
     "max_len": max_len,
     "masking_mode": masking_mode,
     "token_indexers": {
-      // "tokens": {
-      //   "type": "single_id",
-      //   "lowercase_tokens": true,
-      // },
       "tokens": {
-        "type": "bert-pretrained",
-        "pretrained_model": pretrained_bert_model,
-        "do_lowercase": uncased,
-        "use_starting_offsets": true,
+        "type": "single_id",
+        "lowercase_tokens": true,
       },
       [if use_ner_embeddings then "ner_tokens"]: {
         "type": "ner_tag"
@@ -71,25 +61,16 @@ function (
     "f1_average": "micro",
     "ignore_label": "no_relation",
     "verbose_metrics": false,
-    "use_adjacency": true,
     "word_dropout": word_dropout,
     "embedding_dropout": embedding_dropout,
     "encoding_dropout": 0.5,
     "text_field_embedder": {
-      "allow_unmatched_keys": true,
-      "embedder_to_indexer_map": {
-        "tokens": ["tokens", "tokens-offsets"],
-        // "tokens": ["tokens"],
-      },
-      // "tokens": {
-      //   "type": "embedding",
-      //   "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-      //   "embedding_dim": embedding_dim,
-      //   "trainable": embedding_trainable,
-      // },
       "tokens": {
-        "type": "bert-pretrained",
-        "pretrained_model": pretrained_bert_model,
+        "type": "embedding",
+        // "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+        "pretrained_file": "/home/christoph/Downloads/glove.840B.300d.txt",
+        "embedding_dim": embedding_dim,
+        "trainable": embedding_trainable,
       },
       [if use_ner_embeddings then "ner_tokens"]: {
         "type": "embedding",
@@ -118,19 +99,28 @@ function (
       "embedding_dim": offset_embedding_dim,
     },
     "text_encoder": {
-      "type": "gcn",
-      "input_size": text_encoder_input_dim,
-      "hidden_size": text_encoder_hidden_dim,
-      "num_layers": text_encoder_num_layers,
-      "dropout": text_encoder_dropout,
+      "type": "seq2seq_pool",
+      "encoder": {
+        "type": "stacked_self_attention",
+        "input_dim": text_encoder_input_dim,
+        "hidden_dim": text_encoder_hidden_dim,
+        "projection_dim": text_encoder_projection_dim,
+        "feedforward_hidden_dim": text_encoder_feedforward_hidden_dim,
+        "num_layers": text_encoder_num_layers,
+        "num_attention_heads": text_encoder_num_heads,
+        "use_positional_encoding": (use_offset_embeddings == false),
+        "dropout_prob": text_encoder_dropout,
+        "residual_dropout_prob": text_encoder_resid_dropout,
+        "attention_dropout_prob": textn_encoder_attn_dropout,
+      },
       "pooling": text_encoder_pooling,
     },
     "classifier_feedforward": {
       "input_dim": classifier_feedforward_input_dim,
-      "num_layers": 3,
-      "hidden_dims": [200, 200, num_classes],
-      "activations": ["relu", "relu", "linear"],
-      "dropout": [0.0, 0.0, 0.0],
+      "num_layers": 1,
+      "hidden_dims": [num_classes],
+      "activations": ["linear"],
+      "dropout": [0.0],
     },
     // "regularizer": [
     //   ["text_encoder.*weight", {"type": "l2", "alpha": 1e-3}],
@@ -157,7 +147,8 @@ function (
     "grad_clipping": 5.0,
     "validation_metric": "+f1-measure-overall",
     "optimizer": {
-      "type": "sgd",
+      // "type": "sgd",
+      "type": "adam",
       "lr": lr,
     },
     "learning_rate_scheduler": {
