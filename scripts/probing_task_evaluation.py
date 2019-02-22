@@ -18,6 +18,8 @@ logger.setLevel(logging.INFO)
 
 
 ALL_PROBING_TASKS = [
+    "ArgTypeHead",
+    "ArgTypeTail",
     "Length",
     "EntityDistance",
     "ArgumentOrder",
@@ -31,8 +33,6 @@ ALL_PROBING_TASKS = [
     "PosTagHeadRight",
     "PosTagTailLeft",
     "PosTagTailRight",
-    "ArgTypeHead",
-    "ArgTypeTail",
     "TreeDepth",
     "SDPTreeDepth",
     "ArgumentHeadGrammaticalRole",
