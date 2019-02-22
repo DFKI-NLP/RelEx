@@ -4,7 +4,7 @@ import os
 
 # import threading
 import argparse
-from multiprocessing import Queue
+from multiprocessing import Manager
 from joblib import Parallel, delayed
 from probing_task_evaluation import run_evaluation
 
@@ -111,7 +111,8 @@ def run_evaluation_parallel(
 
     # Put indices in queue
     n_gpus = len(cuda_devices)
-    q = Queue(maxsize=n_gpus)
+    manager = Manager()
+    q = manager.Queue(maxsize=n_gpus)
     for i in range(n_gpus):
         q.put(i)
 
