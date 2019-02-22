@@ -1,3 +1,5 @@
+from typing import Optional
+
 import os
 import logging
 import argparse
@@ -76,14 +78,21 @@ def _get_parser():
     return parser
 
 
-def main():
-    parser = _get_parser()
-    args = parser.parse_args()
+def run_evaluation(
+    model_dir: str,
+    data_dir: str,
+    output_dir: Optional[str] = None,
+    predictor: str = "relation_classifier",
+    batch_size: int = 128,
+    cuda_device: int = 0,
+    prototyping: bool = False,
+    cache_representations: bool = True,
+):
 
     predictor = load_predictor(
-        args.model_dir,
-        args.predictor,
-        args.cuda_device,
+        model_dir,
+        predictor,
+        cuda_device,
         archive_filename="model.tar.gz",
         weights_file=None,
     )
@@ -94,7 +103,7 @@ def main():
     cache = {}
 
     def batcher(params, batch, heads, tails, ner, pos, dep, dep_head, ids):
-        if args.cache_representations:
+        if cache_representations:
             inputs = []
             inputs_ids = []
 
@@ -147,12 +156,12 @@ def main():
 
         return sent_embeddings
 
-    if args.prototyping:
+    if prototyping:
         params = {
-            "task_path": args.data_dir,
+            "task_path": data_dir,
             "usepytorch": True,
             "kfold": 5,
-            "batch_size": args.batch_size,
+            "batch_size": batch_size,
         }
         params["classifier"] = {
             "nhid": 0,
@@ -163,10 +172,10 @@ def main():
         }
     else:
         params = {
-            "task_path": args.data_dir,
+            "task_path": data_dir,
             "usepytorch": True,
             "kfold": 10,
-            "batch_size": args.batch_size,
+            "batch_size": batch_size,
         }
         params["classifier"] = {
             "nhid": 0,
@@ -188,11 +197,22 @@ def main():
         f"Probing Task Results: {json.dumps(results, indent=4, sort_keys=True)}"
     )
 
-    output_dir = args.output_dir or args.model_dir
+    output_dir = output_dir or model_dir
 
     with open(os.path.join(output_dir, "probing_task_results.json"), "w") as prob_res_f:
         json.dump(results, prob_res_f, indent=4, sort_keys=True)
 
 
 if __name__ == "__main__":
-    main()
+    parser = _get_parser()
+    args = parser.parse_args()
+    run_evaluation(
+        args.model_dir,
+        args.data_dir,
+        args.output_dir,
+        args.predictor,
+        args.batch_size,
+        args.cuda_device,
+        args.prototyping,
+        args.cache_representations,
+    )
