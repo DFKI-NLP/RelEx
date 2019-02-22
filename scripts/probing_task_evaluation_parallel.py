@@ -46,6 +46,34 @@ def _get_parser():
     return parser
 
 
+def runner(
+    model_dir: str,
+    data_dir: str,
+    output_dir: str,
+    predictor: str,
+    batch_size: int,
+    prototyping: bool,
+    cache_representations: bool,
+    q: Queue,
+):
+    cuda_device = q.get()
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
+
+    run_evaluation(
+        model_dir=model_dir,
+        data_dir=data_dir,
+        output_dir=output_dir,
+        predictor=predictor,
+        batch_size=batch_size,
+        cuda_device=cuda_device,
+        prototyping=prototyping,
+        cache_representations=cache_representations,
+    )
+
+    q.put(cuda_device)
+
+
 def run_evaluation_parallel(
     experiment_dir: str,
     data_dir: str,
@@ -87,26 +115,17 @@ def run_evaluation_parallel(
     for i in range(n_gpus):
         q.put(i)
 
-    def runner(model_dir: str, output_dir: str):
-        cuda_device = q.get()
-
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device)
-
-        run_evaluation(
-            model_dir,
-            data_dir,
-            output_dir,
-            predictor,
-            batch_size,
-            cuda_device,
-            prototyping,
-            cache_representations,
-        )
-
-        q.put(cuda_device)
-
     Parallel(n_jobs=n_gpus, backend="multiprocessing")(
-        delayed(runner)(trial_dir, output_dir)
+        delayed(runner)(
+            model_dir=trial_dir,
+            data_dir=data_dir,
+            output_dir=output_dir,
+            predictor=predictor,
+            batch_size=batch_size,
+            prototyping=prototyping,
+            cache_representations=cache_representations,
+            q=q,
+        )
         for trial_dir, output_dir in zip(trial_dirs, output_dirs)
     )
 
