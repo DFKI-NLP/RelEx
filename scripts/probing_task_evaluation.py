@@ -35,6 +35,8 @@ ALL_PROBING_TASKS = [
     "ArgTypeTail",
     "TreeDepth",
     "SDPTreeDepth",
+    "ArgumentHeadGrammaticalRole",
+    "ArgumentTailGrammaticalRole",
 ]
 
 
