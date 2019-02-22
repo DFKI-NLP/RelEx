@@ -1,18 +1,19 @@
 from typing import List
 
 import os
-import threading
+
+# import threading
 import argparse
-import Queue
+from multiprocessing import Queue
 from joblib import Parallel, delayed
-from .probing_task_evaluation import run_evaluation
+from probing_task_evaluation import run_evaluation
 
 
 def _get_parser():
     parser = argparse.ArgumentParser(description="Run evaluation on probing tasks")
 
     parser.add_argument(
-        "--model-dir",
+        "--experiment-dir",
         type=str,
         required=True,
         help="directory containing the model archive file",
@@ -28,12 +29,6 @@ def _get_parser():
         nargs="+",
         required=True,
         help="a list of cuda device to load the models on",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default=None,
-        help="directory to use for storing the probing task results",
     )
     parser.add_argument(
         "--predictor",
@@ -66,12 +61,12 @@ def run_evaluation_parallel(
     # https://gist.github.com/DmitryUlyanov/a5c37f08dcf0e242a50bf390c176daae#file-run_batch2-py
 
     # Fix print
-    _print = print
-    _rlock = threading.RLock()
+    # _print = print
+    # _rlock = threading.RLock()
 
-    def print(*args, **kwargs):
-        with _rlock:
-            _print(*args, **kwargs)
+    # def print(*args, **kwargs):
+    #     with _rlock:
+    #         _print(*args, **kwargs)
 
     trial_dirs = []
     for dirpath, _, filenames in os.walk(experiment_dir):
@@ -88,7 +83,7 @@ def run_evaluation_parallel(
 
     # Put indices in queue
     n_gpus = len(cuda_devices)
-    q = Queue.Queue(maxsize=n_gpus)
+    q = Queue(maxsize=n_gpus)
     for i in range(n_gpus):
         q.put(i)
 
@@ -110,7 +105,7 @@ def run_evaluation_parallel(
 
         q.put(cuda_device)
 
-    Parallel(n_jobs=n_gpus, backend="threading")(
+    Parallel(n_jobs=n_gpus, backend="multiprocessing")(
         delayed(runner)(trial_dir, output_dir)
         for trial_dir, output_dir in zip(trial_dirs, output_dirs)
     )
@@ -119,13 +114,12 @@ def run_evaluation_parallel(
 if __name__ == "__main__":
     parser = _get_parser()
     args = parser.parse_args()
-    run_evaluation(
-        args.model_dir,
-        args.data_dir,
-        args.output_dir,
-        args.predictor,
-        args.batch_size,
-        args.cuda_device,
-        args.prototyping,
-        args.cache_representations,
+    run_evaluation_parallel(
+        experiment_dir=args.experiment_dir,
+        data_dir=args.data_dir,
+        cuda_devices=args.cuda_devices,
+        predictor=args.predictor,
+        batch_size=args.batch_size,
+        prototyping=args.prototyping,
+        cache_representations=args.cache_representations,
     )

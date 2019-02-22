@@ -207,12 +207,12 @@ if __name__ == "__main__":
     parser = _get_parser()
     args = parser.parse_args()
     run_evaluation(
-        args.model_dir,
-        args.data_dir,
-        args.output_dir,
-        args.predictor,
-        args.batch_size,
-        args.cuda_device,
-        args.prototyping,
-        args.cache_representations,
+        model_dir=args.model_dir,
+        data_dir=args.data_dir,
+        output_dir=args.output_dir,
+        predictor=args.predictor,
+        batch_size=args.batch_size,
+        cuda_device=args.cuda_device,
+        prototyping=args.prototyping,
+        cache_representations=args.cache_representations,
     )
