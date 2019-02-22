@@ -1,0 +1,32 @@
+{
+    "lr": {
+        "eval": "np.random.choice(np.logspace(-5, -2))"
+    },
+    "text_encoder_pooling": {
+        "eval": "np.random.choice(['mean', 'max', 'final'])"
+    },
+    "text_encoder_hidden_dim": {
+        "eval": "np.random.choice([64, 128, 256, 512])"
+    },
+    "text_encoder_projection_dim": {
+        "eval": "np.random.choice([64, 128, 256, 512])"
+    },
+    "text_encoder_feedforward_hidden_dim": {
+        "eval": "np.random.choice([128, 256, 512])"
+    },
+    "text_encoder_num_layers": {
+        "eval": "np.random.choice([2, 4, 8, 16])"
+    },
+    "text_encoder_num_heads": {
+        "eval": "np.random.choice([2, 4, 8, 16])"
+    },
+    "text_encoder_dropout": {
+        "eval": "np.random.choice(np.linspace(0.0, 0.5))"
+    },
+    "embedding_dropout": {
+        "eval": "np.random.choice(np.linspace(0.0, 0.5))"
+    },
+    "textn_encoder_attn_dropout": {
+        "eval": "np.random.choice(np.linspace(0.0, 0.3))"
+    }
+}
