@@ -71,6 +71,8 @@ def _get_parser():
     )
     parser.add_argument("--prototyping", action="store_true")
 
+    parser.add_argument("--cache-representations", action="store_true")
+
     return parser
 
 
@@ -89,24 +91,60 @@ def main():
     def prepare(params, samples):
         pass
 
-    def batcher(params, batch, heads, tails, ner, pos, dep, dep_head):
-        inputs = []
-        for sent, head, tail, n, p, d, dh in zip(
-            batch, heads, tails, ner, pos, dep, dep_head
-        ):
-            inputs.append(
-                dict(
-                    text=" ".join(sent),
-                    head=head,
-                    tail=tail,
-                    ner=n,
-                    pos=p,
-                    dep=d,
-                    dep_heads=dh,
+    cache = {}
+
+    def batcher(params, batch, heads, tails, ner, pos, dep, dep_head, ids):
+        if args.cache_representations:
+            inputs = []
+            inputs_ids = []
+
+            for sent, head, tail, n, p, d, dh, id_ in zip(
+                batch, heads, tails, ner, pos, dep, dep_head, ids
+            ):
+                if id_ not in cache:
+                    inputs.append(
+                        dict(
+                            text=" ".join(sent),
+                            head=head,
+                            tail=tail,
+                            ner=n,
+                            pos=p,
+                            dep=d,
+                            dep_heads=dh,
+                        )
+                    )
+                    inputs_ids.append(id_)
+
+            if inputs:
+                computed_sent_embeddings = {
+                    id_: result["input_rep"]
+                    for id_, result in zip(
+                        inputs_ids, predictor.predict_batch_json(inputs)
+                    )
+                }
+                cache.update(computed_sent_embeddings)
+
+            sent_embeddings = np.array([cache[id_] for id_ in ids])
+
+        else:
+            inputs = []
+            for sent, head, tail, n, p, d, dh in zip(
+                batch, heads, tails, ner, pos, dep, dep_head
+            ):
+                inputs.append(
+                    dict(
+                        text=" ".join(sent),
+                        head=head,
+                        tail=tail,
+                        ner=n,
+                        pos=p,
+                        dep=d,
+                        dep_heads=dh,
+                    )
                 )
-            )
-        results = predictor.predict_batch_json(inputs)
-        sent_embeddings = np.array([result["input_rep"] for result in results])
+            results = predictor.predict_batch_json(inputs)
+            sent_embeddings = np.array([result["input_rep"] for result in results])
+
         return sent_embeddings
 
     if args.prototyping:
