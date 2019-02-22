@@ -54,7 +54,7 @@ def runner(
     batch_size: int,
     prototyping: bool,
     cache_representations: bool,
-    q: Queue,
+    q: Manager,
 ):
     cuda_device = q.get()
 
@@ -66,7 +66,7 @@ def runner(
         output_dir=output_dir,
         predictor=predictor,
         batch_size=batch_size,
-        cuda_device=cuda_device,
+        cuda_device=0,
         prototyping=prototyping,
         cache_representations=cache_representations,
     )
