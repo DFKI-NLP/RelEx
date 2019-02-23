@@ -2,11 +2,11 @@ function (
   lr = 1e-4, num_epochs = 100,
   word_dropout = 0.00,
   embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
-  ner_embedding_dim = 30, pos_embedding_dim = 30, dep_embedding_dim = 30,
+  ner_embedding_dim = null, pos_embedding_dim = null, dep_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_hidden_dim = 256, text_encoder_projection_dim = 256, text_encoder_feedforward_hidden_dim = 512,
   text_encoder_num_layers = 8, text_encoder_num_heads = 8, text_encoder_dropout = 0.1, text_encoder_resid_dropout = 0.2,
-  textn_encoder_attn_dropout = 0.1, text_encoder_pooling = "max",
+  textn_encoder_attn_dropout = 0.1, text_encoder_pooling = "final",
   masking_mode = "NER+Grammar",
   dataset = "tacred",
   train_data_path = "../relex-data/tacred/train.json",
@@ -67,8 +67,7 @@ function (
     "text_field_embedder": {
       "tokens": {
         "type": "embedding",
-        // "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-        "pretrained_file": "/home/christoph/Downloads/glove.840B.300d.txt",
+        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
         "embedding_dim": embedding_dim,
         "trainable": embedding_trainable,
       },
