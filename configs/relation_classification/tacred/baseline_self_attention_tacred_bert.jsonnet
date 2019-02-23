@@ -2,7 +2,7 @@ function (
   lr = 1e-4, num_epochs = 100,
   word_dropout = 0.00,
   uncased = false,
-  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
+  embedding_dim = 0, embedding_trainable = false, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null, dep_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 30,
   text_encoder_hidden_dim = 256, text_encoder_projection_dim = 256, text_encoder_feedforward_hidden_dim = 512,
