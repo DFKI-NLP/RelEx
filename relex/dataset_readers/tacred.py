@@ -136,6 +136,8 @@ class TacredDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
 
         tokenized_text = self._tokenizer.tokenize(text)
+        # for token in tokenized_text:
+        #     token.text = normalize_glove(token.text)
 
         if ner is not None:
             for token, ent_type in zip(tokenized_text, ner):

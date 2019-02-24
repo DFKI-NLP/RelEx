@@ -140,10 +140,16 @@ function (
       "type": "adagrad",
       "lr": lr,
     },
+    // "learning_rate_scheduler": {
+    //   "type": "multi_step",
+    //   "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    //   "gamma": 0.9,
+    // },
     "learning_rate_scheduler": {
-      "type": "multi_step",
-      "milestones": [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-      "gamma": 0.9,
+      "type": "reduce_on_plateau",
+      "factor": 0.9,
+      "mode": "max",
+      "patience": 1
     },
   }
 }
