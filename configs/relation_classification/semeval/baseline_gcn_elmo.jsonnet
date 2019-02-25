@@ -3,7 +3,7 @@ function (
   word_dropout = 0.04,
   embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null, dep_embedding_dim = null,
-  offset_type = "relative", offset_embedding_dim = null,
+  offset_type = "relative", offset_embedding_dim = 50,
   text_encoder_hidden_dim = 200, text_encoder_num_layers = 1, text_encoder_dropout = 0.5,
   text_encoder_pooling = "max",
   masking_mode = null,
