@@ -63,8 +63,7 @@ function (
 
   "model": {
     "type": "basic_relation_classifier",
-    "f1_average": "micro",
-    "ignore_label": "no_relation",
+    "f1_average": "macro",
     "verbose_metrics": false,
     "use_adjacency": true,
     "word_dropout": word_dropout,

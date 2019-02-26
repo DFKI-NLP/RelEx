@@ -6,9 +6,9 @@ function (
   offset_type = "relative", offset_embedding_dim = 50,
   text_encoder_num_filters = 150, text_encoder_ngram_filter_sizes = [2, 3, 4, 5], text_encoder_dropout=0.5,
   dataset = "semeval2010_task8",
-  train_data_path = "../relex-data/semeval_2010_task_8/train.jsonl",
-  validation_data_path = "../relex-data/semeval_2010_task_8/dev.jsonl",
-  max_len = 90, run = 1) {
+  train_data_path = "../relex-data/semeval_2010_task_8_annotated/train.json",
+  validation_data_path = "../relex-data/semeval_2010_task_8_annotated/dev.json",
+  max_len = 100, run = 1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
@@ -28,7 +28,7 @@ function (
   "pytorch_seed": 133 * run,
 
   "dataset_reader": {
-    "type": dataset,
+    "type": "tacred", // dataset,
     "max_len": max_len,
     "token_indexers": {
       "tokens": {
