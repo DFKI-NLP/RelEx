@@ -25,6 +25,9 @@ def _get_parser():
         help="directory containing the probing task data files",
     )
     parser.add_argument(
+        "--dataset", type=str, required=True, help="dataset to be evaluated"
+    )
+    parser.add_argument(
         "--cuda-devices",
         nargs="+",
         required=True,
@@ -49,6 +52,7 @@ def _get_parser():
 def runner(
     model_dir: str,
     data_dir: str,
+    dataset: str,
     output_dir: str,
     predictor: str,
     batch_size: int,
@@ -63,6 +67,7 @@ def runner(
     run_evaluation(
         model_dir=model_dir,
         data_dir=data_dir,
+        dataset=dataset,
         output_dir=output_dir,
         predictor=predictor,
         batch_size=batch_size,
@@ -77,6 +82,7 @@ def runner(
 def run_evaluation_parallel(
     experiment_dir: str,
     data_dir: str,
+    dataset: str,
     cuda_devices: List[int],
     result_filename: str = "result.json",
     trial_dirname: str = "trial",
@@ -120,6 +126,7 @@ def run_evaluation_parallel(
         delayed(runner)(
             model_dir=trial_dir,
             data_dir=data_dir,
+            dataset=dataset,
             output_dir=output_dir,
             predictor=predictor,
             batch_size=batch_size,
@@ -137,6 +144,7 @@ if __name__ == "__main__":
     run_evaluation_parallel(
         experiment_dir=args.experiment_dir,
         data_dir=args.data_dir,
+        dataset=args.dataset,
         cuda_devices=args.cuda_devices,
         predictor=args.predictor,
         batch_size=args.batch_size,

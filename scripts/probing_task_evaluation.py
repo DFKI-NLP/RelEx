@@ -9,7 +9,7 @@ import relex
 import reval
 from relex.predictors.utils import load_predictor
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
@@ -17,18 +17,29 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
-ALL_PROBING_TASKS = [
+ALL_PROBING_TASKS_TACRED = [
     "ArgTypeHead",
     "ArgTypeTail",
     "Length",
     "EntityDistance",
     "ArgumentOrder",
     "EntityExistsBetweenHeadTail",
-    # "EntityCountORGBetweenHeadTail",
-    # "EntityCountPERBetweenHeadTail",
-    # "EntityCountDATEBetweenHeadTail",
-    # "EntityCountMISCBetweenHeadTail",
-    # "EntityCountLOCBetweenHeadTail",
+    "PosTagHeadLeft",
+    "PosTagHeadRight",
+    "PosTagTailLeft",
+    "PosTagTailRight",
+    "TreeDepth",
+    "SDPTreeDepth",
+    "ArgumentHeadGrammaticalRole",
+    "ArgumentTailGrammaticalRole",
+]
+
+ALL_PROBING_TASKS_SEMEVAL = [
+    "ArgTypeHead",
+    "ArgTypeTail",
+    "Length",
+    "EntityDistance",
+    "EntityExistsBetweenHeadTail",
     "PosTagHeadLeft",
     "PosTagHeadRight",
     "PosTagTailLeft",
@@ -54,6 +65,9 @@ def _get_parser():
         type=str,
         required=True,
         help="directory containing the probing task data files",
+    )
+    parser.add_argument(
+        "--dataset", type=str, required=True, help="dataset to be evaluated"
     )
     parser.add_argument(
         "--output-dir",
@@ -83,6 +97,7 @@ def _get_parser():
 def run_evaluation(
     model_dir: str,
     data_dir: str,
+    dataset: str,
     output_dir: Optional[str] = None,
     predictor: str = "relation_classifier",
     batch_size: int = 128,
@@ -187,7 +202,12 @@ def run_evaluation(
             "epoch_size": 4,
         }
 
-    tasks = ALL_PROBING_TASKS
+    if dataset == "tacred":
+        tasks = ALL_PROBING_TASKS_TACRED
+    elif dataset == "semeval2010":
+        tasks = ALL_PROBING_TASKS_SEMEVAL
+    else:
+        raise ValueError(f"Unknown dataset '{dataset}'.")
 
     logger.info(f"Parameters: {json.dumps(params, indent=4, sort_keys=True)}")
     logger.info(f"Tasks: {tasks}")
@@ -211,6 +231,7 @@ if __name__ == "__main__":
     run_evaluation(
         model_dir=args.model_dir,
         data_dir=args.data_dir,
+        dataset=args.dataset,
         output_dir=args.output_dir,
         predictor=args.predictor,
         batch_size=args.batch_size,
