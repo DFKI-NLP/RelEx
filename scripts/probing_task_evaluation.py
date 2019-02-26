@@ -9,7 +9,7 @@ import relex
 import reval
 from relex.predictors.utils import load_predictor
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)-8s %(message)s")
 handler.setFormatter(formatter)
