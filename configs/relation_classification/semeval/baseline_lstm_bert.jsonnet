@@ -1,22 +1,28 @@
 function (
   lr = 0.01, num_epochs = 50,
-  word_dropout = 0.04,
-  embedding_dim = 300, embedding_trainable = false, embedding_dropout = 0.5,
+  word_dropout = 0.00,
+  uncased = false,
+  embedding_dim = 0, embedding_trainable = false, embedding_dropout = 0.5,
   ner_embedding_dim = null, pos_embedding_dim = null, dep_embedding_dim = null,
   offset_type = "relative", offset_embedding_dim = 50,
   text_encoder_hidden_dim = 300, text_encoder_num_layers = 2, text_encoder_bidirectional = true, 
   text_encoder_dropout = 0.5, text_encoder_pooling = "max",
   dataset = "semeval2010_task8",
-  train_data_path = "../relex-data/semeval_2010_task_8/train.jsonl",
-  validation_data_path = "../relex-data/semeval_2010_task_8/dev.jsonl",
-  max_len = 90, run = 1) {
+  train_data_path = "../relex-data/semeval_2010_task_8_annotated/train.json",
+  validation_data_path = "../relex-data/semeval_2010_task_8_annotated/dev.json",
+  max_len = 100, run = 1) {
   
   local use_offset_embeddings = (offset_embedding_dim != null),
   local use_ner_embeddings = (ner_embedding_dim != null),
   local use_pos_embeddings = (pos_embedding_dim != null),
   local use_dep_embeddings = (dep_embedding_dim != null),
 
+  local pretrained_bert_model = if uncased then "bert-base-uncased" else "bert-base-cased",
+
+  local contextualized_embedding_dim = 768,
+
   local text_encoder_input_dim = embedding_dim  
+                                 + contextualized_embedding_dim
                                  + (if use_offset_embeddings then 2 * offset_embedding_dim else 0) 
                                  + (if use_ner_embeddings then ner_embedding_dim else 0)
                                  + (if use_pos_embeddings then pos_embedding_dim else 0)
@@ -31,12 +37,18 @@ function (
   "pytorch_seed": 133 * run,
 
   "dataset_reader": {
-    "type": dataset,
+    "type": "tacred", // dataset,
     "max_len": max_len,
     "token_indexers": {
+      // "tokens": {
+      //   "type": "single_id",
+      //   "lowercase_tokens": true,
+      // },
       "tokens": {
-        "type": "single_id",
-        "lowercase_tokens": true,
+        "type": "bert-pretrained",
+        "pretrained_model": pretrained_bert_model,
+        "do_lowercase": uncased,
+        "use_starting_offsets": true,
       },
       [if use_ner_embeddings then "ner_tokens"]: {
         "type": "ner_tag"
@@ -61,11 +73,20 @@ function (
     "embedding_dropout": embedding_dropout,
     "encoding_dropout": 0.5,
     "text_field_embedder": {
+      "allow_unmatched_keys": true,
+      "embedder_to_indexer_map": {
+        "tokens": ["tokens", "tokens-offsets"],
+        // "tokens": ["tokens"],
+      },
+      // "tokens": {
+      //   "type": "embedding",
+      //   "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
+      //   "embedding_dim": embedding_dim,
+      //   "trainable": embedding_trainable,
+      // },
       "tokens": {
-        "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.840B.300d.txt.gz",
-        "embedding_dim": embedding_dim,
-        "trainable": embedding_trainable,
+        "type": "bert-pretrained",
+        "pretrained_model": pretrained_bert_model,
       },
       [if use_ner_embeddings then "ner_tokens"]: {
         "type": "embedding",

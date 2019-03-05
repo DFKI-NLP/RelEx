@@ -2,24 +2,26 @@ from typing import Dict, Any
 
 import os
 import argparse
-import json
 import logging
-import numpy as np
+import json
 from functools import partial
 from relex.evaluation import semeval2010_task8_evaluation
 from relex.evaluation import tacred_evaluation
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+logger.addHandler(ch)
 
 
 def _get_parser():
-    parser = argparse.ArgumentParser(description="Experiment summary")
+    parser = argparse.ArgumentParser(description="Run evaluation")
 
     parser.add_argument(
         "--experiment-dir",
         type=str,
         required=True,
-        help="directory containing the runs for an experiment",
+        help="directory containing experiment results",
     )
     parser.add_argument(
         "--dataset", type=str, required=True, help="dataset to be evaluated"
@@ -46,57 +48,35 @@ def _get_parser():
     return parser
 
 
-def experiment_summary(
+def evaluate_multi(
     experiment_dir: str,
     scorer,
     result_filename: str = "result.json",
     trial_dirname: str = "trial",
     metrics_filename: str = "metrics.json",
 ) -> Dict[str, Any]:
-    def name_from_path(path: str) -> str:
-        return os.path.basename(os.path.normpath(path))
 
-    def summary_stats(x: np.array) -> Dict[str, Any]:
-        return {"mean": np.mean(x), "stddev": np.std(x)}
-
-    precision = []
-    recall = []
-    f1 = []
-
-    trials = []
-
+    summary = []
     for dirpath, _, filenames in os.walk(experiment_dir):
         for filename in filenames:
             if filename != result_filename:
                 continue
 
-            # result_file = os.path.join(dirpath, result_filename)
+            logger.info(f"Found experiment in {dirpath}")
+
             trial_dir = os.path.join(dirpath, trial_dirname)
-            # metrics_file = os.path.join(trial_dir, metrics_filename)
 
-            trial_precision, trial_recall, trial_f1 = scorer(trial_dir)
-            precision.append(trial_precision)
-            recall.append(trial_recall)
-            f1.append(trial_f1)
+            precision, recall, f1 = scorer(trial_dir)
+            eval_results = dict(precision=precision, recall=recall, f1=f1)
+            summary.append(dict(experiment=dirpath, results=eval_results))
 
-            trials.append(
-                {
-                    "trial": name_from_path(dirpath),
-                    "precision": trial_precision,
-                    "recall": trial_recall,
-                    "f1": trial_f1,
-                }
-            )
+            eval_result_path = os.path.join(dirpath, "evaluation_result.json")
+            logger.info(f"Writing evaluation result to {eval_result_path}")
 
-    return {
-        "experiment": name_from_path(experiment_dir),
-        "trials": trials,
-        "stats": {
-            "precision": summary_stats(precision),
-            "recall": summary_stats(recall),
-            "f1": summary_stats(f1),
-        },
-    }
+            with open(eval_result_path, "w") as result_f:
+                json.dump(eval_results, result_f, indent=4, sort_keys=True)
+
+    return summary
 
 
 def main():
@@ -120,12 +100,9 @@ def main():
             cuda_device=args.cuda_device,
         )
 
-    summary = experiment_summary(args.experiment_dir, scorer)
+    summary = evaluate_multi(args.experiment_dir, scorer)
 
-    logger.info(f"Experiment Summary: {json.dumps(summary, indent=4, sort_keys=True)}")
-
-    with open(os.path.join(args.experiment_dir, "summary.json"), "w") as summary_f:
-        json.dump(summary, summary_f, indent=4, sort_keys=True)
+    logger.info(f"Evaluation Summary: {json.dumps(summary, indent=4, sort_keys=True)}")
 
 
 if __name__ == "__main__":

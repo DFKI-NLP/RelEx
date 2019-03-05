@@ -92,6 +92,7 @@ class TacredDatasetReader(DatasetReader):
             logger.info("Reading TACRED instances from json dataset at: %s", file_path)
             data = json.load(data_file)
             for example in data:
+                # TODO: move normalization to text_to_instance
                 tokens = [normalize_glove(token) for token in example["token"]]
                 relation = example["relation"]
 
@@ -135,6 +136,8 @@ class TacredDatasetReader(DatasetReader):
         # pylint: disable=arguments-differ
 
         tokenized_text = self._tokenizer.tokenize(text)
+        for token in tokenized_text:
+            token.text = normalize_glove(token.text)
 
         if ner is not None:
             for token, ent_type in zip(tokenized_text, ner):
@@ -196,6 +199,9 @@ class TacredDatasetReader(DatasetReader):
         elif self._masking_mode == "UNK":
             head_replacement = "__UNK__"
             tail_replacement = "__UNK__"
+        elif self._masking_mode == "NER_NL":
+            head_replacement = f"{head_type.lower()}"
+            tail_replacement = f"{tail_type.lower()}"
         else:
             raise RuntimeError("Unknown masking mode provided")
 
