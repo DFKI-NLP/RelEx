@@ -42,6 +42,12 @@ def _get_parser():
     parser.add_argument(
         "--batch-size", type=int, default=128, help="batch size to use for predictions"
     )
+    parser.add_argument(
+        "--result-file-name",
+        type=str,
+        default="probing_task_results.json",
+        help="name of the file the results are written to",
+    )
     parser.add_argument("--prototyping", action="store_true")
 
     parser.add_argument("--cache-representations", action="store_true")
@@ -90,6 +96,7 @@ def run_evaluation_parallel(
     batch_size: int = 128,
     prototyping: bool = False,
     cache_representations: bool = True,
+    result_file_name: str = "probing_task_results.json",
 ):
     # code taken from
     # https://gist.github.com/DmitryUlyanov/a5c37f08dcf0e242a50bf390c176daae#file-run_batch2-py
@@ -132,6 +139,7 @@ def run_evaluation_parallel(
             batch_size=batch_size,
             prototyping=prototyping,
             cache_representations=cache_representations,
+            result_file_name=result_file_name,
             q=q,
         )
         for trial_dir, output_dir in zip(trial_dirs, output_dirs)
@@ -150,4 +158,5 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         prototyping=args.prototyping,
         cache_representations=args.cache_representations,
+        result_file_name=args.result_file_name,
     )

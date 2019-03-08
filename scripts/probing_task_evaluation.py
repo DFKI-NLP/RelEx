@@ -87,6 +87,12 @@ def _get_parser():
     parser.add_argument(
         "--cuda-device", type=int, default=0, help="a cuda device to load the model on"
     )
+    parser.add_argument(
+        "--result-file-name",
+        type=str,
+        default="probing_task_results.json",
+        help="name of the file the results are written to",
+    )
     parser.add_argument("--prototyping", action="store_true")
 
     parser.add_argument("--cache-representations", action="store_true")
@@ -104,6 +110,7 @@ def run_evaluation(
     cuda_device: int = 0,
     prototyping: bool = False,
     cache_representations: bool = True,
+    result_file_name: str = "probing_task_results.json",
 ):
 
     predictor = load_predictor(
@@ -221,7 +228,7 @@ def run_evaluation(
 
     output_dir = output_dir or model_dir
 
-    with open(os.path.join(output_dir, "probing_task_results.json"), "w") as prob_res_f:
+    with open(os.path.join(output_dir, result_file_name), "w") as prob_res_f:
         json.dump(results, prob_res_f, indent=4, sort_keys=True)
 
 
@@ -238,4 +245,5 @@ if __name__ == "__main__":
         cuda_device=args.cuda_device,
         prototyping=args.prototyping,
         cache_representations=args.cache_representations,
+        result_file_name=args.result_file_name,
     )

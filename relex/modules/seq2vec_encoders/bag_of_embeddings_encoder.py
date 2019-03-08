@@ -1,9 +1,7 @@
-from typing import Sequence, Dict, List, Callable, Optional
+from typing import Optional
 
 import torch
-import numpy as np
 from overrides import overrides
-from allennlp.common.checks import ConfigurationError
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
 from allennlp.nn.activations import Activation
 from relex.modules.seq2vec_encoders.utils import pool
@@ -29,10 +27,11 @@ class BagOfEmbeddings(Seq2VecEncoder):
 
         self._activation = Activation.by_name(activation) if activation else None
 
-        if self._projection_dim:
-            self._projection = torch.nn.Linear(
-                self._embedding_dim, self._projection_dim
-            )
+        self._projection = (
+            torch.nn.Linear(self._embedding_dim, self._projection_dim)
+            if projection_dim
+            else lambda x: x
+        )
 
     @overrides
     def get_input_dim(self) -> int:
