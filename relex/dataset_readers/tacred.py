@@ -151,8 +151,6 @@ class TacredDatasetReader(DatasetReader):
             for token, dep_rel in zip(tokenized_text, dep):
                 token.dep_ = dep_rel
 
-        tokenized_text = tokenized_text[: self._max_len]
-
         head_start, head_end = head
         tail_start, tail_end = tail
 
@@ -161,7 +159,8 @@ class TacredDatasetReader(DatasetReader):
         tail_start = min(tail_start, self._max_len - 1)
         tail_end = min(tail_end, self._max_len - 1)
 
-        text_tokens_field = TextField(tokenized_text, self._token_indexers)
+        text_tokens_field = TextField(tokenized_text[: self._max_len],
+                                      self._token_indexers)
         # SpanField expects an inclusive end index
         fields = {
             "text": text_tokens_field,
@@ -174,6 +173,12 @@ class TacredDatasetReader(DatasetReader):
                 dep_heads, len(tokenized_text), head, tail, prune=1
             )
             indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
+
+            # Only keep edges within the clipped sentence length
+            valid_seq_idxs = range(0, self._max_len)
+            indices = [idx_pair for idx_pair in indices
+                       if idx_pair[0] in valid_seq_idxs and idx_pair[1] in valid_seq_idxs]
+
             fields["adjacency"] = AdjacencyField(
                 indices, sequence_field=text_tokens_field, padding_value=0
             )
