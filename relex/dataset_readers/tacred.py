@@ -175,9 +175,8 @@ class TacredDatasetReader(DatasetReader):
             indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
 
             # Only keep edges within the clipped sentence length
-            valid_seq_idxs = range(0, self._max_len)
             indices = [idx_pair for idx_pair in indices
-                       if idx_pair[0] in valid_seq_idxs and idx_pair[1] in valid_seq_idxs]
+                       if idx_pair[0] < self._max_len and idx_pair[1] < self._max_len]
 
             fields["adjacency"] = AdjacencyField(
                 indices, sequence_field=text_tokens_field, padding_value=0
