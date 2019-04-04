@@ -109,10 +109,10 @@ class GCN(Seq2VecEncoder):
     def forward(
         self,
         x: torch.Tensor,
-        adjacency: torch.Tensor,
+        mask: torch.Tensor,
         head: torch.Tensor,
         tail: torch.Tensor,
-        mask: torch.Tensor,
+        adjacency: torch.Tensor,
     ):
         if mask is not None:
             x = x * mask.unsqueeze(-1).float()
