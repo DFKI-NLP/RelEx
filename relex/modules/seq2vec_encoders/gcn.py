@@ -83,7 +83,7 @@ class GCN(Seq2VecEncoder):
                                    PoolingScope.HEAD,
                                    PoolingScope.TAIL]
         else:
-            self._pooling_scope = [PoolingScope(scope)
+            self._pooling_scope = [PoolingScope(scope.lower())
                                    for scope in pooling_scope]
 
         self._gcn_layers = []

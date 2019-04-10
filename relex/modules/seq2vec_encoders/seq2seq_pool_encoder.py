@@ -20,7 +20,7 @@ class Seq2SeqPoolEncoder(Seq2VecEncoder):
         if pooling_scope is None:
             self._pooling_scope = [PoolingScope.SEQUENCE]
         else:
-            self._pooling_scope = [PoolingScope(scope)
+            self._pooling_scope = [PoolingScope(scope.lower())
                                    for scope in pooling_scope]
 
     @overrides
