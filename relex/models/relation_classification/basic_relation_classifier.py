@@ -64,6 +64,7 @@ class BasicRelationClassifier(Model):
         ignore_label: str = None,
         f1_average: str = "macro",
         use_adjacency: bool = False,
+        use_entity_offsets: bool = False,
     ) -> None:
         super(BasicRelationClassifier, self).__init__(vocab, regularizer)
 
@@ -87,6 +88,9 @@ class BasicRelationClassifier(Model):
         self.offset_embedder_tail = offset_embedder_tail
         self._verbose_metrics = verbose_metrics
         self._use_adjacency = use_adjacency
+        # Loading previously trained GCNs requires entity
+        # offsets as well as the adjacency matrix
+        self._use_entity_offsets = use_entity_offsets or self._use_adjacency
 
         offset_embedding_dim = 0
         if offset_embedder_head is not None:
@@ -189,12 +193,14 @@ class BasicRelationClassifier(Model):
         else:
             embedded_text = embeddings[0]
 
+        additional_encoder_args = {}
+        if self._use_entity_offsets:
+            additional_encoder_args['head'] = head
+            additional_encoder_args['tail'] = tail
         if self._use_adjacency:
-            encoded_text = self.text_encoder(
-                embedded_text, adjacency, head, tail, text_mask
-            )
-        else:
-            encoded_text = self.text_encoder(embedded_text, text_mask)
+            additional_encoder_args['adjacency'] = adjacency
+
+        encoded_text = self.text_encoder(embedded_text, text_mask, **additional_encoder_args)
 
         encoded_text = self.encoding_dropout(encoded_text)
 

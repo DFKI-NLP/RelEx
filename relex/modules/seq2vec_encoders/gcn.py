@@ -1,11 +1,12 @@
 import math
+from typing import List
+
 import torch
 from overrides import overrides
 from torch.nn.parameter import Parameter
 from allennlp.nn import Activation
-from allennlp.nn import util
 from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
-from relex.modules.seq2vec_encoders.utils import pool
+from relex.modules.seq2vec_encoders.utils import scoped_pool, PoolingScope
 
 
 class GraphConvolution(torch.nn.Module):
@@ -68,6 +69,7 @@ class GCN(Seq2VecEncoder):
         dropout: float = 0,
         gcn_layer_activation: Activation = None,
         pooling: str = "max",
+        pooling_scope: List[str] = None,
     ) -> None:
         super().__init__()
 
@@ -76,6 +78,13 @@ class GCN(Seq2VecEncoder):
         self.num_layers = num_layers
         self._activation = gcn_layer_activation or Activation.by_name("relu")()
         self._pooling = pooling
+        if pooling_scope is None:
+            self._pooling_scope = [PoolingScope.SEQUENCE,
+                                   PoolingScope.HEAD,
+                                   PoolingScope.TAIL]
+        else:
+            self._pooling_scope = [PoolingScope(scope.lower())
+                                   for scope in pooling_scope]
 
         self._gcn_layers = []
 
@@ -96,19 +105,18 @@ class GCN(Seq2VecEncoder):
 
     @overrides
     def get_output_dim(self) -> int:
-        return self.hidden_size * 3
+        return self.hidden_size * len(self._pooling_scope)
 
     def forward(
         self,
         x: torch.Tensor,
-        adjacency: torch.Tensor,
+        mask: torch.Tensor,
         head: torch.Tensor,
         tail: torch.Tensor,
-        mask: torch.Tensor,
+        adjacency: torch.Tensor,
     ):
         if mask is not None:
-            mask = mask.unsqueeze(-1)
-            x = x * mask.float()
+            x = x * mask.unsqueeze(-1).float()
 
         denom = adjacency.sum(dim=2, keepdim=True) + 1
 
@@ -119,32 +127,12 @@ class GCN(Seq2VecEncoder):
             if i < len(self._gcn_layers) - 1:
                 output = self.dropout(output)
 
-        batch_size, seq_len, _ = x.size()
-
-        pos_range = util.get_range_vector(seq_len, util.get_device_of(x)).repeat(
-            (batch_size, 1)
+        return scoped_pool(
+            output,
+            mask,
+            pooling=self._pooling,
+            pooling_scopes=self._pooling_scope,
+            is_bidirectional=False,
+            head=head,
+            tail=tail
         )
-
-        head_start = head[:, 0].unsqueeze(dim=1)
-        head_end = head[:, 1].unsqueeze(dim=1)
-        tail_start = tail[:, 0].unsqueeze(dim=1)
-        tail_end = tail[:, 1].unsqueeze(dim=1)
-
-        head_mask = (
-            (torch.ge(pos_range, head_start) * torch.le(pos_range, head_end))
-            .unsqueeze(-1)
-            .long()
-        )
-        tail_mask = (
-            (torch.ge(pos_range, tail_start) * torch.le(pos_range, tail_end))
-            .unsqueeze(-1)
-            .long()
-        )
-
-        pooled = []
-        for m in [mask, head_mask, tail_mask]:
-            pooled.append(
-                pool(output, m, dim=1, pooling=self._pooling, is_bidirectional=False)
-            )
-
-        return torch.cat(pooled, dim=-1)
