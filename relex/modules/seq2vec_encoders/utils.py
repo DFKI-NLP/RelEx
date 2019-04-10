@@ -10,7 +10,8 @@ from allennlp.nn.util import masked_max, masked_mean, get_final_encoder_states
 
 class PoolingScope(Enum):
     SEQUENCE = "sequence"
-    ENTITIES = "entities"
+    HEAD = "head"
+    TAIL = "tail"
 
 
 def pool(
@@ -46,7 +47,7 @@ def scoped_pool(
     if PoolingScope.SEQUENCE in pooling_scopes:
         pooling_masks.append(mask.unsqueeze(-1))
 
-    if PoolingScope.ENTITIES in pooling_scopes:
+    if PoolingScope.HEAD in pooling_scopes or PoolingScope.TAIL in pooling_scopes:
         assert head is not None and tail is not None, \
             "head and tail offsets are required for pooling on entities"
 
@@ -55,24 +56,26 @@ def scoped_pool(
             (batch_size, 1)
         )
 
-        head_start = head[:, 0].unsqueeze(dim=1)
-        head_end = head[:, 1].unsqueeze(dim=1)
-        tail_start = tail[:, 0].unsqueeze(dim=1)
-        tail_end = tail[:, 1].unsqueeze(dim=1)
+        if PoolingScope.HEAD in pooling_scopes:
+            head_start = head[:, 0].unsqueeze(dim=1)
+            head_end = head[:, 1].unsqueeze(dim=1)
+            head_mask = (
+                (torch.ge(pos_range, head_start) * torch.le(pos_range, head_end))
+                .unsqueeze(-1)
+                .long()
+            )
+            pooling_masks.append(head_mask)
 
-        head_mask = (
-            (torch.ge(pos_range, head_start) * torch.le(pos_range, head_end))
-            .unsqueeze(-1)
-            .long()
-        )
-        pooling_masks.append(head_mask)
+        if PoolingScope.TAIL in pooling_scopes:
+            tail_start = tail[:, 0].unsqueeze(dim=1)
+            tail_end = tail[:, 1].unsqueeze(dim=1)
 
-        tail_mask = (
-            (torch.ge(pos_range, tail_start) * torch.le(pos_range, tail_end))
-            .unsqueeze(-1)
-            .long()
-        )
-        pooling_masks.append(tail_mask)
+            tail_mask = (
+                (torch.ge(pos_range, tail_start) * torch.le(pos_range, tail_end))
+                .unsqueeze(-1)
+                .long()
+            )
+            pooling_masks.append(tail_mask)
 
     assert len(pooling_masks) > 0, "At least one pooling scope must be defined"
 

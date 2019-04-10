@@ -29,7 +29,7 @@ class Seq2SeqPoolEncoder(Seq2VecEncoder):
 
     @overrides
     def get_output_dim(self) -> int:
-        return self._encoder.get_output_dim()
+        return self._encoder.get_output_dim() * len(self._pooling_scope)
 
     def forward(
             self,

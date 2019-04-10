@@ -80,7 +80,8 @@ class GCN(Seq2VecEncoder):
         self._pooling = pooling
         if pooling_scope is None:
             self._pooling_scope = [PoolingScope.SEQUENCE,
-                                   PoolingScope.ENTITIES]
+                                   PoolingScope.HEAD,
+                                   PoolingScope.TAIL]
         else:
             self._pooling_scope = [PoolingScope(scope)
                                    for scope in pooling_scope]
@@ -104,7 +105,7 @@ class GCN(Seq2VecEncoder):
 
     @overrides
     def get_output_dim(self) -> int:
-        return self.hidden_size * 3
+        return self.hidden_size * len(self._pooling_scope)
 
     def forward(
         self,
