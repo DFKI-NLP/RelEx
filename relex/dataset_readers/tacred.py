@@ -11,16 +11,13 @@ from allennlp.data.fields import (
     TextField,
     SpanField,
     MetadataField,
-    AdjacencyField,
-)
+    AdjacencyField)
 from allennlp.data.instance import Instance
 from allennlp.data.tokenizers import Tokenizer, WordTokenizer
 from allennlp.data.tokenizers.word_splitter import JustSpacesWordSplitter
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
-from relex.modules.seq2vec_encoders.utils import (
-    dep_heads_to_tree,
-    tree_to_adjacency_list,
-)
+
+from relex.dataset_readers.utils import parse_adjacency_indices
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -171,10 +168,8 @@ class TacredDatasetReader(DatasetReader):
         }
 
         if dep_heads is not None:
-            tree = dep_heads_to_tree(
-                dep_heads, len(tokenized_text), head, tail, prune=self._dep_pruning
-            )
-            indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
+            indices = parse_adjacency_indices(dep, dep_heads, head, tail,
+                                              pruning_distance=self._dep_pruning)
 
             # Only keep edges within the clipped sentence length
             indices = [idx_pair for idx_pair in indices
