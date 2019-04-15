@@ -99,10 +99,7 @@ class GraphAttentionLayer(torch.nn.Module):
         super().__init__()
         self._hidden_dim = output_dim
         self._weight_vector = Parameter(torch.FloatTensor(input_dim, self._hidden_dim))
-        if activation is not None:
-            self.activation = activation
-        else:
-            self.activation = lambda x: x
+        self.activation = activation or (lambda x: x)
 
         attention_dim = output_dim / num_heads
         assert attention_dim.is_integer(), "output dim must be divisible by number of heads"
