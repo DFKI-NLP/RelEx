@@ -74,6 +74,7 @@ class TacredDatasetReader(DatasetReader):
         lazy: bool = False,
         tokenizer: Tokenizer = None,
         token_indexers: Dict[str, TokenIndexer] = None,
+        dep_pruning: int = 1
     ) -> None:
         super().__init__(lazy)
         self._max_len = max_len
@@ -82,6 +83,7 @@ class TacredDatasetReader(DatasetReader):
         )
         self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
         self._masking_mode = masking_mode
+        self._dep_pruning = dep_pruning
 
     @overrides
     def _read(self, file_path: str):
@@ -170,7 +172,7 @@ class TacredDatasetReader(DatasetReader):
 
         if dep_heads is not None:
             tree = dep_heads_to_tree(
-                dep_heads, len(tokenized_text), head, tail, prune=1
+                dep_heads, len(tokenized_text), head, tail, prune=self._dep_pruning
             )
             indices = tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
 
