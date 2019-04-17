@@ -321,39 +321,42 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_unpruned_adjacency_matrix(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER", dep_pruning=-1)
+        reader = TacredDatasetReader(max_len=MAX_LEN,
+                                     masking_mode="NER",
+                                     dep_pruning=-1)
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
         expected_edges = [
-            (11, 3), (11, 4), (11, 9), (11, 10), (11, 12), (11, 13), (11, 14),
-            (11, 25), (3, 0), (3, 1), (3, 2), (9, 5), (9, 6), (9, 7), (9, 8),
-            (14, 16), (16, 15), (16, 19), (19, 17), (19, 18), (19, 21), (21, 20),
-            (21, 24), (24, 22), (24, 23), (3, 11), (4, 11), (9, 11), (10, 11),
-            (12, 11), (13, 11), (14, 11), (25, 11), (0, 3), (1, 3), (2, 3),
-            (5, 9), (6, 9), (7, 9), (8, 9), (16, 14), (15, 16), (19, 16),
-            (17, 19), (18, 19), (21, 19), (20, 21), (24, 21), (22, 24), (23, 24),
-            (11, 11), (3, 3), (4, 4), (9, 9), (10, 10), (12, 12), (13, 13),
-            (14, 14), (25, 25), (0, 0), (1, 1), (2, 2), (5, 5), (6, 6), (7, 7),
-            (8, 8), (16, 16), (15, 15), (19, 19), (17, 17), (18, 18), (21, 21),
-            (20, 20), (24, 24), (22, 22), (23, 23)
+            (0, 0), (0, 3), (1, 1), (1, 3), (2, 2), (2, 3), (3, 0), (3, 1),
+            (3, 2), (3, 3), (3, 11), (4, 4), (4, 11), (5, 5), (5, 9), (6, 6),
+            (6, 9), (7, 7), (7, 9), (8, 8), (8, 9), (9, 5), (9, 6), (9, 7),
+            (9, 8), (9, 9), (9, 11), (10, 10), (10, 11), (11, 3), (11, 4),
+            (11, 9), (11, 10), (11, 11), (11, 12), (11, 13), (11, 14),
+            (11, 25), (12, 11), (12, 12), (13, 11), (13, 13), (14, 11),
+            (14, 14), (14, 16), (15, 15), (15, 16), (16, 14), (16, 15),
+            (16, 16), (16, 19), (17, 17), (17, 19), (18, 18), (18, 19),
+            (19, 16), (19, 17), (19, 18), (19, 19), (19, 21), (20, 20),
+            (20, 21), (21, 19), (21, 20), (21, 21), (21, 24), (22, 22),
+            (22, 24), (23, 23), (23, 24), (24, 21), (24, 22), (24, 23),
+            (24, 24), (25, 11), (25, 25)
         ]
         adjacency = instances[0].fields["adjacency"]
 
-        assert adjacency.indices == expected_edges
+        assert sorted(adjacency.indices) == expected_edges
 
     def test_k1_pruned_adjacency_matrix(self):
         MAX_LEN = 100
         reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER", dep_pruning=1)
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
-        expected_edges = [
+        expected_edges = sorted([
             (11, 3), (11, 4), (11, 9), (11, 10), (11, 12), (11, 13), (11, 14),
             (11, 25), (9, 5), (9, 6), (9, 7), (9, 8), (3, 11), (4, 11),
             (9, 11), (10, 11), (12, 11), (13, 11), (14, 11), (25, 11), (5, 9),
             (6, 9), (7, 9), (8, 9), (11, 11), (3, 3), (4, 4), (9, 9),
             (10, 10), (12, 12), (13, 13), (14, 14), (25, 25), (5, 5), (6, 6),
             (7, 7), (8, 8)
-        ]
+        ])
         adjacency = instances[0].fields["adjacency"]
 
-        assert adjacency.indices == expected_edges
+        assert sorted(adjacency.indices) == expected_edges

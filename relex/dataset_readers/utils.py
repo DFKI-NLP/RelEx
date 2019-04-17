@@ -1,16 +1,28 @@
 from collections import deque
 from typing import List, Tuple
 
+import networkx as nx
+
 
 def parse_adjacency_indices(dep: List[str],
                             dep_heads: List[int],
                             head: Tuple[int, int],
                             tail: Tuple[int, int],
                             pruning_distance: int = 1):
-    tree = dep_heads_to_tree(
-        dep_heads, len(dep), head, tail, prune=pruning_distance
-    )
-    return tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
+    if pruning_distance == -1:
+        dep_tree = nx.DiGraph()
+        dep_tree.add_nodes_from(range(len(dep)))
+        for (node_idx, dep_head) in enumerate(dep_heads):
+            dep_tree.add_edge(node_idx, node_idx)
+            if dep_head > 0:
+                dep_tree.add_edge(dep_head - 1, node_idx)
+                dep_tree.add_edge(node_idx, dep_head - 1)
+        return dep_tree.edges
+    else:
+        tree = dep_heads_to_tree(
+            dep_heads, len(dep), head, tail, prune=pruning_distance
+        )
+        return tree_to_adjacency_list(tree, directed=False, add_self_loop=True)
 
 
 class Tree(object):
