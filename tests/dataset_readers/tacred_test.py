@@ -346,17 +346,19 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
     def test_k1_pruned_adjacency_matrix(self):
         MAX_LEN = 100
-        reader = TacredDatasetReader(max_len=MAX_LEN, masking_mode="NER", dep_pruning=1)
+        reader = TacredDatasetReader(max_len=MAX_LEN,
+                                     masking_mode="NER",
+                                     dep_pruning=1)
         instances = ensure_list(reader.read("tests/fixtures/tacred.json"))
 
-        expected_edges = sorted([
-            (11, 3), (11, 4), (11, 9), (11, 10), (11, 12), (11, 13), (11, 14),
-            (11, 25), (9, 5), (9, 6), (9, 7), (9, 8), (3, 11), (4, 11),
-            (9, 11), (10, 11), (12, 11), (13, 11), (14, 11), (25, 11), (5, 9),
-            (6, 9), (7, 9), (8, 9), (11, 11), (3, 3), (4, 4), (9, 9),
-            (10, 10), (12, 12), (13, 13), (14, 14), (25, 25), (5, 5), (6, 6),
-            (7, 7), (8, 8)
-        ])
+        expected_edges = [
+            (3, 3), (3, 11), (4, 4), (4, 11), (5, 5), (5, 9), (6, 6), (6, 9),
+            (7, 7), (7, 9), (8, 8), (8, 9), (9, 5), (9, 6), (9, 7), (9, 8),
+            (9, 9), (9, 11), (10, 10), (10, 11), (11, 3), (11, 4), (11, 9),
+            (11, 10), (11, 11), (11, 12), (11, 13), (11, 14), (11, 25),
+            (12, 11), (12, 12), (13, 11), (13, 13), (14, 11), (14, 14),
+            (25, 11), (25, 25)
+        ]
         adjacency = instances[0].fields["adjacency"]
 
         assert sorted(adjacency.indices) == expected_edges
