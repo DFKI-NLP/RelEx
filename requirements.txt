@@ -3,3 +3,5 @@ allennlp==0.8.2
 
 # Testing
 pytest
+
+networkx
