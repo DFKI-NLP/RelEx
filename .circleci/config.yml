@@ -1,0 +1,46 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6.7
+
+    working_directory: ~/RelEx
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install --progress-bar off pytest mypy .
+            # pip install --progress-bar off .
+            pip install --progress-bar off -r requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python -m pytest -v tests/
+
+      # - run:
+      #     name: run mypy
+      #     command: |
+      #       . venv/bin/activate
+      #       mypy stan --ignore-missing-imports
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
