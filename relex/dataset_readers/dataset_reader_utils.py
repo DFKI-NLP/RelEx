@@ -7,7 +7,7 @@ def parse_adjacency_indices(dep: List[str],
                             dep_heads: List[int],
                             head: Tuple[int, int],
                             tail: Tuple[int, int],
-                            pruning_distance: int = 1):
+                            pruning_distance: int) -> List[Tuple[int, int]]:
     dep_tree = nx.DiGraph()
     dep_tree.add_nodes_from(range(len(dep)))
     for (node_idx, dep_head) in enumerate(dep_heads):
@@ -18,7 +18,7 @@ def parse_adjacency_indices(dep: List[str],
 
     dep_edges = dep_tree.edges
     if pruning_distance > -1:
-        pruned_nodes = []
+        pruned_nodes = []  # type: List[int]
         sdp_nodes = nx.shortest_path(dep_tree, head[0], tail[0])
 
         for node in dep_tree.nodes:
@@ -26,9 +26,9 @@ def parse_adjacency_indices(dep: List[str],
                 if node in pruned_nodes:
                     continue
 
-                if (node == sdp_node or
-                        node in range(head[0], head[1] + 1) or
-                        node in range(tail[0], tail[1] + 1)):
+                if (node == sdp_node
+                            or node in range(head[0], head[1] + 1)
+                            or node in range(tail[0], tail[1] + 1)):
                     pruned_nodes.append(node)
                 else:
                     path_length = nx.shortest_path_length(dep_tree, node, sdp_node)

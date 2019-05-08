@@ -3,7 +3,6 @@ from typing import Dict, Optional, List, Any
 import torch
 import numpy
 from overrides import overrides
-import torch.nn.functional as F
 
 from allennlp.data.vocabulary import DEFAULT_OOV_TOKEN
 from allennlp.common.checks import ConfigurationError
@@ -22,11 +21,11 @@ from relex.metrics import F1Measure
 @Model.register("basic_relation_classifier")
 class BasicRelationClassifier(Model):
     """
-    This ``Model`` performs relation classification on a given input. 
-    We assume we're given a text, head and tail entity offsets, and we predict the 
-    relation between head and tail entity. The basic model structure: we'll embed the 
-    text, relative head and tail offsets, and encode it with a Seq2VecEncoder, getting a 
-    single vector representing the content.  We'll then pass the result through a 
+    This ``Model`` performs relation classification on a given input.
+    We assume we're given a text, head and tail entity offsets, and we predict the
+    relation between head and tail entity. The basic model structure: we'll embed the
+    text, relative head and tail offsets, and encode it with a Seq2VecEncoder, getting a
+    single vector representing the content.  We'll then pass the result through a
     feedforward network, the output of which we'll use as our scores for each label.
     Parameters
     ----------
@@ -37,6 +36,13 @@ class BasicRelationClassifier(Model):
     text_encoder : ``Seq2VecEncoder``
         The encoder that we will use to convert the text to a vector.
     classifier_feedforward : ``FeedForward``
+
+    word_dropout : ``float```
+
+    embedding_dropout : ``float``
+
+    encoding_dropout : ``float``
+
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     offset_embedder_head : ``OffsetEmbedder``
@@ -45,27 +51,35 @@ class BasicRelationClassifier(Model):
         The embedder we use to embed each tokens relative offset to the tail entity.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
+    verbose_metrics : ``bool``
+
+    ignore_label : ``str``
+
+    f1_average : ``str```
+        Averaging method ("micro" or "macro") to compute the aggregated F1 score.
+    use_adjacency : ``bool``
+
+    use_entity_offsets : ``bool``
+
     """
 
-    def __init__(
-        self,
-        vocab: Vocabulary,
-        text_field_embedder: TextFieldEmbedder,
-        text_encoder: Seq2VecEncoder,
-        classifier_feedforward: FeedForward,
-        word_dropout: Optional[float] = 0,
-        embedding_dropout: Optional[float] = 0,
-        encoding_dropout: Optional[float] = 0,
-        offset_embedder_head: Optional[OffsetEmbedder] = None,
-        offset_embedder_tail: Optional[OffsetEmbedder] = None,
-        initializer: InitializerApplicator = InitializerApplicator(),
-        regularizer: Optional[RegularizerApplicator] = None,
-        verbose_metrics: bool = False,
-        ignore_label: str = None,
-        f1_average: str = "macro",
-        use_adjacency: bool = False,
-        use_entity_offsets: bool = False,
-    ) -> None:
+    def __init__(self,
+                 vocab: Vocabulary,
+                 text_field_embedder: TextFieldEmbedder,
+                 text_encoder: Seq2VecEncoder,
+                 classifier_feedforward: FeedForward,
+                 word_dropout: float = 0.,
+                 embedding_dropout: float = 0.,
+                 encoding_dropout: float = 0.,
+                 offset_embedder_head: Optional[OffsetEmbedder] = None,
+                 offset_embedder_tail: Optional[OffsetEmbedder] = None,
+                 initializer: InitializerApplicator = InitializerApplicator(),
+                 regularizer: Optional[RegularizerApplicator] = None,
+                 verbose_metrics: bool = False,
+                 ignore_label: str = None,
+                 f1_average: str = "macro",
+                 use_adjacency: bool = False,
+                 use_entity_offsets: bool = False) -> None:
         super(BasicRelationClassifier, self).__init__(vocab, regularizer)
 
         self.text_field_embedder = text_field_embedder
@@ -73,16 +87,15 @@ class BasicRelationClassifier(Model):
         self.text_encoder = text_encoder
 
         self.word_dropout = (
-            WordDropout(word_dropout, fill_idx=vocab.get_token_index(DEFAULT_OOV_TOKEN))
-            if word_dropout > 0
-            else lambda x, m: x
-        )
+                WordDropout(word_dropout, fill_idx=vocab.get_token_index(DEFAULT_OOV_TOKEN))
+                if word_dropout > 0. else lambda x, m: x)
         self.embedding_dropout = (
-            torch.nn.Dropout(encoding_dropout) if embedding_dropout > 0 else lambda x: x
-        )
+                torch.nn.Dropout(encoding_dropout)
+                if embedding_dropout > 0. else lambda x: x)
         self.encoding_dropout = (
-            torch.nn.Dropout(encoding_dropout) if encoding_dropout > 0 else lambda x: x
-        )
+                torch.nn.Dropout(encoding_dropout)
+                if encoding_dropout > 0. else lambda x: x)
+
         self.classifier_feedforward = classifier_feedforward
         self.offset_embedder_head = offset_embedder_head
         self.offset_embedder_tail = offset_embedder_tail
@@ -101,63 +114,56 @@ class BasicRelationClassifier(Model):
             if not offset_embedder_tail.is_additive():
                 offset_embedding_dim += offset_embedder_tail.get_output_dim()
 
-        text_encoder_input_dim = (
-            text_field_embedder.get_output_dim() + offset_embedding_dim
-        )
+        text_encoder_input_dim = (text_field_embedder.get_output_dim()
+                                  + offset_embedding_dim)
 
         if text_encoder_input_dim != text_encoder.get_input_dim():
             raise ConfigurationError(
-                "The output dimension of the text_field_embedder and offset_embedders "
-                "must match the input dimension of the text_encoder. Found {} and {}, "
-                "respectively.".format(
-                    text_field_embedder.get_output_dim(), text_encoder.get_input_dim()
-                )
-            )
+                    "The output dimension of the text_field_embedder and offset_embedders "
+                    "must match the input dimension of the text_encoder. Found {} and {}, "
+                    "respectively.".format(text_field_embedder.get_output_dim(),
+                                           text_encoder.get_input_dim()))
 
         if text_encoder.get_output_dim() != classifier_feedforward.get_input_dim():
             raise ConfigurationError(
-                "The output dimension of the text_encoder must match the "
-                "input dimension of the classifier_feedforward. Found {} and {}, "
-                "respectively.".format(
-                    text_encoder.get_output_dim(),
-                    classifier_feedforward.get_input_dim(),
-                )
-            )
+                    "The output dimension of the text_encoder must match the "
+                    "input dimension of the classifier_feedforward. Found {} and {}, "
+                    "respectively.".format(text_encoder.get_output_dim(),
+                                           classifier_feedforward.get_input_dim()))
 
         if classifier_feedforward.get_output_dim() != self.num_classes:
             raise ConfigurationError(
-                "The output dimension of the classifier_feedforward must match the "
-                "number of classes in the dataset. Found {} and {}, "
-                "respectively.".format(
-                    classifier_feedforward.get_output_dim(), self.num_classes
-                )
-            )
+                    "The output dimension of the classifier_feedforward must match the "
+                    "number of classes in the dataset. Found {} and {}, "
+                    "respectively.".format(classifier_feedforward.get_output_dim(),
+                                           self.num_classes))
 
         self.metrics = {"accuracy": CategoricalAccuracy()}
-        self._f1_measure = F1Measure(
-            vocabulary=self.vocab, average=f1_average, ignore_label=ignore_label
-        )
+        self._f1_measure = F1Measure(vocabulary=self.vocab,
+                                     average=f1_average,
+                                     ignore_label=ignore_label)
 
         self.loss = torch.nn.CrossEntropyLoss()
 
         initializer(self)
 
     @overrides
-    def forward(
-        self,  # type: ignore
-        text: Dict[str, torch.LongTensor],
-        head: torch.LongTensor,
-        tail: torch.LongTensor,
-        adjacency: torch.LongTensor = None,
-        metadata: Optional[List[Dict[str, Any]]] = None,
-        label: Optional[torch.LongTensor] = None,
-    ) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
+    def forward(self,  # type: ignore
+                text: Dict[str, torch.LongTensor],
+                head: torch.LongTensor,
+                tail: torch.LongTensor,
+                adjacency: torch.LongTensor = None,
+                metadata: Optional[List[Dict[str, Any]]] = None,
+                label: Optional[torch.LongTensor] = None) -> Dict[str, torch.Tensor]:
+        # pylint: disable=arguments-differ,unused-argument
         """
         Parameters
         ----------
-        text : Dict[str, Variable], required
+        text : Dict[str, torch.Tensor], required
             The output of ``TextField.as_array()``.
+        head : torch.LongTensor,
+        tail : torch.LongTensor,
+        adjacency: torch.LongTensor
         label : Variable, optional (default = None)
             A variable representing the label for each instance in the batch.
         Returns
@@ -173,7 +179,7 @@ class BasicRelationClassifier(Model):
 
         # TODO: make this generic
         if "tokens" in text:
-            text["tokens"] = self.word_dropout(text["tokens"], text_mask)
+            text["tokens"] = self.word_dropout(text["tokens"], text_mask)  # type: ignore
 
         embedded_text = self.text_field_embedder(text)
 
@@ -181,13 +187,15 @@ class BasicRelationClassifier(Model):
 
         embeddings = [embedded_text]
         if self.offset_embedder_head is not None:
-            embeddings.append(
-                self.offset_embedder_head(embedded_text, text_mask, span=head)
-            )
+            embeddings.append(self.offset_embedder_head(embedded_text,
+                                                        text_mask,
+                                                        span=head))
+
         if self.offset_embedder_tail is not None:
-            embeddings.append(
-                self.offset_embedder_tail(embedded_text, text_mask, span=tail)
-            )
+            embeddings.append(self.offset_embedder_tail(embedded_text,
+                                                        text_mask,
+                                                        span=tail))
+
         if len(embeddings) > 1:
             embedded_text = torch.cat(embeddings, dim=-1)
         else:
@@ -200,7 +208,9 @@ class BasicRelationClassifier(Model):
         if self._use_adjacency:
             additional_encoder_args['adjacency'] = adjacency
 
-        encoded_text = self.text_encoder(embedded_text, text_mask, **additional_encoder_args)
+        encoded_text = self.text_encoder(embedded_text,
+                                         text_mask,
+                                         **additional_encoder_args)
 
         encoded_text = self.encoding_dropout(encoded_text)
 
@@ -222,31 +232,26 @@ class BasicRelationClassifier(Model):
         Does a simple argmax over the class probabilities, converts indices to string labels, and
         adds a ``"label"`` key to the dictionary with the result.
         """
-        class_probabilities = F.softmax(output_dict["logits"], dim=-1)
+        class_probabilities = torch.nn.functional.softmax(output_dict["logits"], dim=-1)
         output_dict["class_probabilities"] = class_probabilities
 
         predictions = class_probabilities.cpu().data.numpy()
         argmax_indices = numpy.argmax(predictions, axis=-1)
-        labels = [
-            self.vocab.get_token_from_index(x, namespace="labels")
-            for x in argmax_indices
-        ]
+        labels = [self.vocab.get_token_from_index(x, namespace="labels")
+                  for x in argmax_indices]
         output_dict["label"] = labels
         return output_dict
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        metrics_to_return = {
-            metric_name: metric.get_metric(reset)
-            for metric_name, metric in self.metrics.items()
-        }
+        metrics_to_return = {metric_name: metric.get_metric(reset)
+                             for metric_name, metric in self.metrics.items()}
 
         f1_dict = self._f1_measure.get_metric(reset=reset)
         if self._verbose_metrics:
             metrics_to_return.update(f1_dict)
         else:
-            metrics_to_return.update(
-                {x: y for x, y in f1_dict.items() if "overall" in x}
-            )
+            metrics_to_return.update({x: y for x, y in f1_dict.items()
+                                      if "overall" in x})
 
         return metrics_to_return

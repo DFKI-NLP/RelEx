@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import torch
 from overrides import overrides
@@ -31,24 +31,22 @@ class Seq2SeqPoolEncoder(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._encoder.get_output_dim() * len(self._pooling_scope)
 
-    def forward(
-            self,
-            tokens: torch.Tensor,
-            mask: torch.Tensor,
-            head: torch.LongTensor = None,
-            tail: torch.LongTensor = None
-    ):  # pylint: disable=arguments-differ
+    def forward(self,
+                tokens: torch.Tensor,
+                mask: torch.Tensor,
+                head: Optional[torch.LongTensor] = None,
+                tail: Optional[torch.LongTensor] = None) -> torch.Tensor:
+        # pylint: disable=arguments-differ
+
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 
         tokens = self._encoder(tokens, mask)
 
-        return scoped_pool(
-            tokens,
-            mask,
-            pooling=self._pooling,
-            pooling_scopes=self._pooling_scope,
-            is_bidirectional=self._encoder.is_bidirectional(),
-            head=head,
-            tail=tail
-        )
+        return scoped_pool(tokens,
+                           mask,
+                           pooling=self._pooling,
+                           pooling_scopes=self._pooling_scope,
+                           is_bidirectional=self._encoder.is_bidirectional(),
+                           head=head,
+                           tail=tail)

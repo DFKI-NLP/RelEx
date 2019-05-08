@@ -12,13 +12,11 @@ class BagOfEmbeddings(Seq2VecEncoder):
     """
     """
 
-    def __init__(
-        self,
-        embedding_dim: int,
-        pooling: str = "sum",
-        projection_dim: Optional[int] = None,
-        activation: Optional[str] = None,
-    ) -> None:
+    def __init__(self,
+                 embedding_dim: int,
+                 pooling: str = "sum",
+                 projection_dim: Optional[int] = None,
+                 activation: Optional[str] = None) -> None:
         super().__init__()
 
         self._embedding_dim = embedding_dim
@@ -27,11 +25,10 @@ class BagOfEmbeddings(Seq2VecEncoder):
 
         self._activation = Activation.by_name(activation) if activation else None
 
-        self._projection = (
-            torch.nn.Linear(self._embedding_dim, self._projection_dim)
-            if projection_dim
-            else lambda x: x
-        )
+        self._projection = (torch.nn.Linear(self._embedding_dim,
+                                            self._projection_dim)
+                            if projection_dim
+                            else lambda x: x)
 
     @overrides
     def get_input_dim(self) -> int:
@@ -41,22 +38,22 @@ class BagOfEmbeddings(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._projection_dim or self._embedding_dim
 
-    def forward(
-        self, tokens: torch.Tensor, mask: torch.Tensor
-    ):  # pylint: disable=arguments-differ
+    def forward(self,
+                tokens: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
+
         if mask is not None:
             tokens = tokens * mask.unsqueeze(-1).float()
 
         if self._projection_dim is not None:
             tokens = self._projection(tokens)
 
-        out = pool(
-            tokens,
-            mask.unsqueeze(-1),
-            dim=1,
-            pooling=self._pooling,
-            is_bidirectional=False,
-        )
+        out = pool(tokens,
+                   mask.unsqueeze(-1),
+                   dim=1,
+                   pooling=self._pooling,
+                   is_bidirectional=False)
 
         if self._activation is not None:
             out = self._activation(out)
