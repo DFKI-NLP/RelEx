@@ -41,7 +41,7 @@ class TacredDatasetReader(DatasetReader):
 
     Parameters
     ----------
-    max_len : ``int``
+    max_len : ``int``, required
         Max number of tokens for each text. This is necessary for computing the relative offset
         of head and tail entities.
     masking_mode : ``str``, optional
@@ -59,7 +59,7 @@ class TacredDatasetReader(DatasetReader):
     token_indexers : ``Dict[str, TokenIndexer]``, optional
         Indexers used to define input token representations. Defaults to ``{"tokens":
         SingleIdTokenIndexer()}``.
-    dep_pruning : ``int``, (optional, default=-1)
+    dep_pruning : ``int``, (optional, default=1)
         If >= 0 and dependency parse information is provided, prune the tree along the tokens
         on the shortest dependency path (SDP) between head and tail entity, while retaining all
         other tokens within "dep_pruning" distance to any of the SDP nodes.

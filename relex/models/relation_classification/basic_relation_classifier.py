@@ -33,16 +33,17 @@ class BasicRelationClassifier(Model):
         A Vocabulary, required in order to compute sizes for input/output projections.
     text_field_embedder : ``TextFieldEmbedder``, required
         Used to embed the ``tokens`` ``TextField`` we get as input to the model.
-    text_encoder : ``Seq2VecEncoder``
-        The encoder that we will use to convert the text to a vector.
-    classifier_feedforward : ``FeedForward``
-
-    word_dropout : ``float```
-
-    embedding_dropout : ``float``
-
-    encoding_dropout : ``float``
-
+    text_encoder : ``Seq2VecEncoder``, required
+        The encoder that converts the input text to a vector.
+    classifier_feedforward : ``FeedForward``, required
+        The feedforward network that predicts the relation from the vector
+        representation of the text.
+    word_dropout : ``float```, optional (default=``0.``)
+        Probability that a word/token is replaced by the OOV token.
+    embedding_dropout : ``float``, optional (default=``0.``)
+        Embedding dropout probability.
+    encoding_dropout : ``float``, optional (default=``0.``)
+        Text encoding dropout probability.
     initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
         Used to initialize the model parameters.
     offset_embedder_head : ``OffsetEmbedder``
@@ -51,16 +52,17 @@ class BasicRelationClassifier(Model):
         The embedder we use to embed each tokens relative offset to the tail entity.
     regularizer : ``RegularizerApplicator``, optional (default=``None``)
         If provided, will be used to calculate the regularization penalty during training.
-    verbose_metrics : ``bool``
-
-    ignore_label : ``str``
-
-    f1_average : ``str```
+    verbose_metrics : ``bool``, optional (default=``False``)
+        If true, output per-label metrics instead of aggregated precision, recall, and F1.
+    ignore_label : ``str``, optional (default=``None``)
+        If set, the label is ignored during metrics computation (e.g. for no_relation).
+    f1_average : ``str```, optional (default=``macro``)
         Averaging method ("micro" or "macro") to compute the aggregated F1 score.
     use_adjacency : ``bool``
-
+        If true, the adjacency matrix computed from the dependency parse is passed to the
+        text encoder.
     use_entity_offsets : ``bool``
-
+        If true, head and tail spans are passed to the text encoder.
     """
 
     def __init__(self,
