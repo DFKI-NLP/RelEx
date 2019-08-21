@@ -4,15 +4,15 @@ import re
 import csv
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile
-from relex.predictors.utils import load_predictor
-from relex.models.utils import batched_predict_instances
+from relex.predictors.predictor_utils import load_predictor
+from relex.models.model_utils import batched_predict_instances
 
 
 def _write_id_label_file(file_path: str, ids: List[str], labels: List[str]) -> None:
     assert len(ids) == len(labels)
 
-    with open(file_path, "w") as f:
-        writer = csv.writer(f, delimiter="\t")
+    with open(file_path, "w") as output_file:
+        writer = csv.writer(output_file, delimiter="\t")
         for row in zip(ids, labels):
             writer.writerow(row)
 
@@ -21,9 +21,9 @@ PRECISION_REGEX = r"P =\s*([0-9]{1,2}\.[0-9]{2})%"
 RECALL_REGEX = r"R =\s*([0-9]{1,2}\.[0-9]{2})%"
 F1_REGEX = r"F1 =\s*([0-9]{1,2}\.[0-9]{2})%"
 
-OFFICIAL_RESULT_REGEX = (
-    r"\(9\+1\)-WAY EVALUATION TAKING DIRECTIONALITY INTO ACCOUNT -- OFFICIAL"
-)
+OFFICIAL_RESULT_REGEX = (r"\(9\+1\)-WAY EVALUATION TAKING DIRECTIONALITY "
+                         "INTO ACCOUNT -- OFFICIAL")
+
 RESULT_LINE_REGEX = r"MACRO-averaged result \(excluding Other\):\n((.*\n){1})"
 
 
@@ -53,21 +53,18 @@ def prec_rec_f1_from_report(report):
     return precision, recall, f1
 
 
-def evaluate(
-    model_dir: str,
-    test_file: str,
-    eval_script_file,
-    archive_filename: str = "model.tar.gz",
-    cuda_device: int = -1,
-    predictor_name: str = "relation_classifier",
-    weights_file: Optional[str] = None,
-    batch_size: int = 16,
-) -> str:
-    predictor = load_predictor(
-        model_dir, predictor_name, cuda_device, archive_filename, weights_file
-    )
+def evaluate(model_dir: str,
+             test_file: str,
+             eval_script_file,
+             archive_filename: str = "model.tar.gz",
+             cuda_device: int = -1,
+             predictor_name: str = "relation_classifier",
+             weights_file: Optional[str] = None,
+             batch_size: int = 16) -> str:
+    predictor = load_predictor(model_dir, predictor_name, cuda_device,
+                               archive_filename, weights_file)
 
-    test_instances = predictor._dataset_reader.read(test_file)
+    test_instances = predictor._dataset_reader.read(test_file)  # pylint: disable=protected-access
     test_results = batched_predict_instances(predictor, test_instances, batch_size)
 
     instance_ids = [instance["metadata"]["id"] for instance in test_instances]
@@ -79,12 +76,10 @@ def evaluate(
     predicted_labels_file = NamedTemporaryFile(delete=True).name
     _write_id_label_file(predicted_labels_file, instance_ids, predicted_labels)
 
-    p = run(
-        [eval_script_file, true_labels_file, predicted_labels_file],
-        stdout=PIPE,
-        encoding="utf-8",
-    )
+    result = run([eval_script_file, true_labels_file, predicted_labels_file],
+                 stdout=PIPE,
+                 encoding="utf-8")
 
-    report = p.stdout
+    report = result.stdout
     print(report)
     return prec_rec_f1_from_report(report)

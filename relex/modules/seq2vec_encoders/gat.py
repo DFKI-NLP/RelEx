@@ -1,15 +1,13 @@
-import math
 from typing import List
 
+import math
 import torch
-
+from torch import nn
+from overrides import overrides
 from allennlp.modules import Seq2VecEncoder
 from allennlp.modules.matrix_attention import LinearMatrixAttention
 from allennlp.nn import Activation
 from allennlp.nn.util import masked_softmax, weighted_sum
-from overrides import overrides
-from torch import nn
-from torch.nn import Parameter
 
 from relex.modules.seq2vec_encoders.utils import PoolingScope, scoped_pool
 
@@ -17,18 +15,16 @@ from relex.modules.seq2vec_encoders.utils import PoolingScope, scoped_pool
 @Seq2VecEncoder.register('gat')
 class GAT(Seq2VecEncoder):
 
-    def __init__(
-            self,
-            input_dim: int,
-            hidden_dim: int,
-            num_layers: int = 1,
-            num_heads: int = 1,
-            activation: Activation = None,
-            input_dropout: float = 0.0,
-            att_dropout: float = 0.0,
-            pooling: str = "max",
-            pooling_scope: List[str] = None,
-    ) -> None:
+    def __init__(self,
+                 input_dim: int,
+                 hidden_dim: int,
+                 num_layers: int = 1,
+                 num_heads: int = 1,
+                 activation: Activation = None,
+                 input_dropout: float = 0.0,
+                 att_dropout: float = 0.0,
+                 pooling: str = "max",
+                 pooling_scope: List[str] = None) -> None:
         super().__init__()
         self._input_dim = input_dim
         self._hidden_dim = hidden_dim
@@ -36,16 +32,15 @@ class GAT(Seq2VecEncoder):
 
         layer_activation = activation or Activation.by_name("leaky_relu")(0.2)
 
-        self._gat_layers = []
+        self._gat_layers = []  # type: List[GraphAttentionLayer]
         for layer_idx in range(num_layers):
-            gat_layer = GraphAttentionLayer(
-                input_dim=input_dim if layer_idx == 0 else hidden_dim,
-                output_dim=hidden_dim,
-                num_heads=num_heads,
-                input_dropout=input_dropout,
-                att_dropout=att_dropout,
-                activation=layer_activation
-            )
+            layer_input_dim = input_dim if layer_idx == 0 else hidden_dim
+            gat_layer = GraphAttentionLayer(input_dim=layer_input_dim,
+                                            output_dim=hidden_dim,
+                                            num_heads=num_heads,
+                                            input_dropout=input_dropout,
+                                            att_dropout=att_dropout,
+                                            activation=layer_activation)
             self._gat_layers.append(gat_layer)
             self.add_module(f"gat_layer_{layer_idx}", gat_layer)
 
@@ -65,27 +60,25 @@ class GAT(Seq2VecEncoder):
     def get_output_dim(self) -> int:
         return self._hidden_dim * 3
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            mask: torch.Tensor,
-            head: torch.Tensor,
-            tail: torch.Tensor,
-            adjacency: torch.Tensor
-    ):
-        output = x
+    def forward(self,
+                inputs: torch.Tensor,
+                mask: torch.Tensor,
+                head: torch.Tensor,
+                tail: torch.Tensor,
+                adjacency: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
+
+        output = inputs
         for gat_layer in self._gat_layers:
             output = gat_layer(output, mask, adjacency)
 
-        return scoped_pool(
-            output,
-            mask,
-            pooling=self._pooling,
-            pooling_scopes=self._pooling_scope,
-            is_bidirectional=False,
-            head=head,
-            tail=tail
-        )
+        return scoped_pool(output,
+                           mask,
+                           pooling=self._pooling,
+                           pooling_scopes=self._pooling_scope,
+                           is_bidirectional=False,
+                           head=head,
+                           tail=tail)
 
 
 class GraphAttentionLayer(torch.nn.Module):
@@ -98,7 +91,7 @@ class GraphAttentionLayer(torch.nn.Module):
                  att_dropout: float = 0.0) -> None:
         super().__init__()
         self._hidden_dim = output_dim
-        self._weight_vector = Parameter(torch.FloatTensor(input_dim, self._hidden_dim))
+        self._weight_vector = nn.Parameter(torch.FloatTensor(input_dim, self._hidden_dim))
         self.activation = activation or (lambda x: x)
 
         attention_dim = output_dim / num_heads
@@ -125,13 +118,13 @@ class GraphAttentionLayer(torch.nn.Module):
         stdv = 1.0 / math.sqrt(self._weight_vector.size(1))
         self._weight_vector.data.uniform_(-stdv, stdv)
 
-    def masked_self_attention(self, x, mask, adjacency):
-        batch_size, seq_len, _ = x.size()
+    def masked_self_attention(self, inputs, mask, adjacency):
+        batch_size, seq_len, _ = inputs.size()
 
         # shape (num_heads * batch_size, seq_len, attention_dim)
-        x = x.view(batch_size, seq_len, self._num_heads, self._attention_dim)
-        x = x.transpose(1, 2).contiguous()
-        x = x.view(batch_size * self._num_heads, seq_len, self._attention_dim)
+        inputs = inputs.view(batch_size, seq_len, self._num_heads, self._attention_dim)
+        inputs = inputs.transpose(1, 2).contiguous()
+        inputs = inputs.view(batch_size * self._num_heads, seq_len, self._attention_dim)
 
         # shape (num_heads * batch_size, seq_len, seq_len)
         adjacency_per_head = adjacency \
@@ -140,15 +133,16 @@ class GraphAttentionLayer(torch.nn.Module):
             .view(batch_size * self._num_heads, seq_len, seq_len).byte()
 
         # shape (num_heads * batch_size, seq_len, seq_len)
-        mask_per_head = mask.repeat(1, self._num_heads).view(batch_size * self._num_heads, seq_len).float()
+        mask_per_head = mask.repeat(1, self._num_heads) \
+                            .view(batch_size * self._num_heads, seq_len).float()
         mask_per_head = mask_per_head.unsqueeze(2)
-        mask_per_head = mask_per_head.bmm(mask_per_head.transpose(1,2)).byte()
+        mask_per_head = mask_per_head.bmm(mask_per_head.transpose(1, 2)).byte()
 
         # Only attend on nodes visible in the adjacency matrix
         attention_mask = adjacency_per_head & mask_per_head
         attention_mask = self.att_dropout(attention_mask)
 
-        similarities = self.matrix_attention(x, x)
+        similarities = self.matrix_attention(inputs, inputs)
 
         # shape (num_heads * batch_size, seq_len, seq_len)
         # Normalise the distributions, using the same mask for all heads.
@@ -157,7 +151,7 @@ class GraphAttentionLayer(torch.nn.Module):
         # Take a weighted sum of the values with respect to the attention
         # distributions for each element in the num_heads * batch_size dimension.
         # shape (num_heads * batch_size, seq_len, attention_dim)
-        outputs = weighted_sum(x, attention)
+        outputs = weighted_sum(inputs, attention)
 
         # Reshape back to original shape (batch_size, timesteps, hidden_dim)
 
@@ -170,20 +164,19 @@ class GraphAttentionLayer(torch.nn.Module):
 
         return outputs
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            mask: torch.Tensor,
-            adjacency: torch.Tensor
-    ):
-        batch_size, seq_len, _ = x.size()
+    def forward(self,
+                inputs: torch.Tensor,
+                mask: torch.Tensor,
+                adjacency: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
 
-        x = self.input_dropout(x)
-        x = x.view(batch_size * seq_len, -1)
-        x = torch.mm(x, self._weight_vector)
-        x = x.view(batch_size, seq_len, -1)
-        x = self.masked_self_attention(x, mask, adjacency)
-        x = self.activation(x)
+        batch_size, seq_len, _ = inputs.size()
 
-        return x
+        inputs = self.input_dropout(inputs)
+        inputs = inputs.view(batch_size * seq_len, -1)
+        inputs = torch.mm(inputs, self._weight_vector)
+        inputs = inputs.view(batch_size, seq_len, -1)
+        inputs = self.masked_self_attention(inputs, mask, adjacency)
+        inputs = self.activation(inputs)
 
+        return inputs

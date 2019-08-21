@@ -17,16 +17,18 @@ class EntityOnlyOffsetEmbedder(OffsetEmbedder):
     def is_additive(self) -> bool:
         return False
 
-    def forward(
-        self, inputs: torch.Tensor, mask: torch.Tensor, span: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self,
+                inputs: torch.Tensor,
+                mask: torch.Tensor,
+                span: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ,unused-argument
+
         # input -> [B x seq_len x d], offset -> [B x 2]
         batch_size, seq_len, _ = inputs.size()
 
         offset = span[:, 0].unsqueeze(-1)
         position_range = util.get_range_vector(
-            seq_len, util.get_device_of(inputs)
-        ).repeat((batch_size, 1))
+                seq_len, util.get_device_of(inputs)).repeat((batch_size, 1))
 
         offset_mask = position_range == offset
 

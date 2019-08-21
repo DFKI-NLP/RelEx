@@ -3,21 +3,23 @@ import torch
 
 class WordDropout(torch.nn.Module):
     """
-    Implementation of word dropout. Randomly drops out entire words (or characters) 
+    Implementation of word dropout. Randomly drops out entire words (or characters)
     in embedding space.
     """
 
-    def __init__(self, p=0.05, fill_idx=1):
+    def __init__(self, p: float = 0.05, fill_idx: int = 1):
         super(WordDropout, self).__init__()
-        self.p = p
+        self.prob = p
         self.fill_idx = fill_idx
 
-    def forward(self, x, mask):
-        if not self.training or not self.p:
-            return x
+    def forward(self, inputs: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        # pylint: disable=arguments-differ
 
-        m = x.data.new(1, x.size(1)).bernoulli_(self.p)
-        dropout_mask = torch.autograd.Variable(m, requires_grad=False)
+        if not self.training or not self.prob:
+            return inputs
+
+        dropout_mask = inputs.data.new(1, inputs.size(1)).bernoulli_(self.prob)
+        dropout_mask = torch.autograd.Variable(dropout_mask, requires_grad=False)
         dropout_mask = dropout_mask * mask
-        dropout_mask = dropout_mask.expand_as(x)
-        return x.masked_fill_(dropout_mask.byte(), self.fill_idx)
+        dropout_mask = dropout_mask.expand_as(inputs)
+        return inputs.masked_fill_(dropout_mask.byte(), self.fill_idx)

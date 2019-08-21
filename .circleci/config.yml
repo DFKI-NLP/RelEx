@@ -20,9 +20,8 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install --progress-bar off pytest mypy
-            # pip install --progress-bar off .
-            pip install --progress-bar off -r requirements.txt
+            pip install --progress-bar off pytest pylint mypy
+            pip install --progress-bar off .
 
       - save_cache:
           paths:
@@ -35,11 +34,11 @@ jobs:
             . venv/bin/activate
             python -m pytest -v tests/
 
-      # - run:
-      #     name: run mypy
-      #     command: |
-      #       . venv/bin/activate
-      #       mypy stan --ignore-missing-imports
+      - run:
+          name: run mypy
+          command: |
+            . venv/bin/activate
+            mypy relex --ignore-missing-imports
 
       - store_artifacts:
           path: test-reports

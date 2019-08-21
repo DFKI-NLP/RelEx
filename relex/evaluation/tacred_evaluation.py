@@ -1,15 +1,17 @@
-from typing import List, Optional
+from typing import Optional
 
 import sys
 from collections import Counter
-from relex.predictors.utils import load_predictor
-from relex.models.utils import batched_predict_instances
+from relex.predictors.predictor_utils import load_predictor
+from relex.models.model_utils import batched_predict_instances
 
 
 NO_RELATION = "no_relation"
 
 
 def score(key, prediction, verbose=False):
+    # TODO: state source
+
     correct_by_relation = Counter()
     guessed_by_relation = Counter()
     gold_by_relation = Counter()
@@ -81,14 +83,12 @@ def score(key, prediction, verbose=False):
         print("Final Score:")
     prec_micro = 1.0
     if sum(guessed_by_relation.values()) > 0:
-        prec_micro = float(sum(correct_by_relation.values())) / float(
-            sum(guessed_by_relation.values())
-        )
+        prec_micro = (float(sum(correct_by_relation.values()))
+                      / float(sum(guessed_by_relation.values())))
     recall_micro = 0.0
     if sum(gold_by_relation.values()) > 0:
-        recall_micro = float(sum(correct_by_relation.values())) / float(
-            sum(gold_by_relation.values())
-        )
+        recall_micro = (float(sum(correct_by_relation.values()))
+                        / float(sum(gold_by_relation.values())))
     f1_micro = 0.0
     if prec_micro + recall_micro > 0.0:
         f1_micro = 2.0 * prec_micro * recall_micro / (prec_micro + recall_micro)
@@ -98,25 +98,17 @@ def score(key, prediction, verbose=False):
     return prec_micro, recall_micro, f1_micro
 
 
-def evaluate(
-    model_dir: str,
-    test_file: str,
-    archive_filename: str = "model.tar.gz",
-    cuda_device: int = -1,
-    predictor_name: str = "relation_classifier",
-    weights_file: Optional[str] = None,
-    batch_size: int = 16,
-) -> str:
-    # load predictor from archive in model dir
-    # load test file via dataset loader from test file
-    # predict all instances
-    # compute and output official evaluation script result
+def evaluate(model_dir: str,
+             test_file: str,
+             archive_filename: str = "model.tar.gz",
+             cuda_device: int = -1,
+             predictor_name: str = "relation_classifier",
+             weights_file: Optional[str] = None,
+             batch_size: int = 16) -> str:
+    predictor = load_predictor(model_dir, predictor_name, cuda_device,
+                               archive_filename, weights_file)
 
-    predictor = load_predictor(
-        model_dir, predictor_name, cuda_device, archive_filename, weights_file
-    )
-
-    test_instances = predictor._dataset_reader.read(test_file)
+    test_instances = predictor._dataset_reader.read(test_file)  # pylint: disable=protected-access
     test_results = batched_predict_instances(predictor, test_instances, batch_size)
 
     true_labels = [instance["label"].label for instance in test_instances]
