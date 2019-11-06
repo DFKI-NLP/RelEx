@@ -131,19 +131,19 @@ class TacredDatasetReader(DatasetReader):
             tokenized_text = [Token(t) for t in text]
 
         for token in tokenized_text:
-            token.text = normalize_glove(token.text)
+            token._replace(text=normalize_glove(token.text))
 
         if ner is not None:
             for token, ent_type in zip(tokenized_text, ner):
-                token.ent_type_ = ent_type
+                token._replace(ent_type_=ent_type)
 
         if pos is not None:
             for token, pos_tag in zip(tokenized_text, pos):
-                token.tag_ = pos_tag
+                token._replace(tag_=pos_tag)
 
         if dep is not None:
             for token, dep_rel in zip(tokenized_text, dep):
-                token.dep_ = dep_rel
+                token._replace(dep_=dep_rel)
 
         head_start, head_end = head
         tail_start, tail_end = tail
