@@ -1,5 +1,5 @@
 # Project dependencies
-allennlp==0.8.2
+allennlp
 
 # Testing
 pytest
