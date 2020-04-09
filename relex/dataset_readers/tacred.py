@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Union, Optional
 import json
 import logging
 
@@ -114,7 +114,7 @@ class TacredDatasetReader(DatasetReader):
 
     @overrides
     def text_to_instance(self,
-                         text: List[str],
+                         text: Union[str, List[str]],
                          head: Tuple[int, int],
                          tail: Tuple[int, int],
                          id_: Optional[str] = None,
@@ -125,26 +125,19 @@ class TacredDatasetReader(DatasetReader):
                          dep_heads: Optional[List[int]] = None) -> Instance:  # type: ignore
         # pylint: disable=arguments-differ
 
+        tokenized_text: List[Token] = []
         if isinstance(text, str):
             tokenized_text = self._tokenizer.tokenize(text)
         else:
-            tokenized_text = [Token(t) for t in text]
-
-        for token in tokenized_text:
-            token._replace(text=normalize_glove(token.text))
-
-        if ner is not None:
-            for token, ent_type in zip(tokenized_text, ner):
-                token._replace(ent_type_=ent_type)
-
-        if pos is not None:
-            for token, pos_tag in zip(tokenized_text, pos):
-                token._replace(tag_=pos_tag)
-
-        if dep is not None:
-            for token, dep_rel in zip(tokenized_text, dep):
-                token._replace(dep_=dep_rel)
-
+            for idx, token_text in enumerate(text):
+                tokenized_text.append(Token(normalize_glove(token_text),  # text
+                                            idx,  # idx
+                                            None,  # lemma_
+                                            pos[idx] if pos is not None else None,  # pos_
+                                            pos[idx] if pos is not None else None,  # tag_
+                                            dep[idx] if dep is not None else None,  # dep_
+                                            ner[idx] if ner is not None else None))  # ent_type_
+        
         head_start, head_end = head
         tail_start, tail_end = tail
 

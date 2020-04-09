@@ -135,6 +135,7 @@ class TestTacredDatasetReader(AllenNlpTestCase):
 
         tokens = fields["text"].tokens
         assert [t.text for t in tokens] == instance1["tokens"]
+        print([t.ent_type_ for t in tokens])
         assert [t.ent_type_ for t in tokens] == instance1["ner"]
         assert [t.tag_ for t in tokens] == instance1["pos"]
         assert [t.dep_ for t in tokens] == instance1["dep"]
