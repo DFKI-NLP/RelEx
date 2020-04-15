@@ -25,7 +25,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="relex",
-    version="0.0.1a",
+    version="0.0.2a",
     author="Christoph Alt",
     author_email="christoph.alt@posteo.de",
     description="RelEx - State-of-the-art relation extraction framework",
