@@ -77,4 +77,4 @@ Also, please consider cite the following paper when using RelEx:
 ```
 
 ## 📘&nbsp; Licence
-RelEx is released under the under terms of the [Apache 2.0 License](LICENCE).
+RelEx is released under the terms of the [Apache 2.0 License](LICENCE).
