@@ -14,7 +14,7 @@ A simple framework for Relation Extraction built on AllenNLP.
 
 ## ✅&nbsp; Requirements
 
-REval is tested with:
+RelEx is tested with:
 
 - Python 3.7
 
@@ -76,5 +76,5 @@ Also, please consider cite the following paper when using RelEx:
 }
 ```
 
-## 📘&nbsp; License
-REval is released under the under terms of the [Apache 2.0 License](LICENSE).
+## 📘&nbsp; Licence
+RelEx is released under the under terms of the [Apache 2.0 License](LICENCE).
