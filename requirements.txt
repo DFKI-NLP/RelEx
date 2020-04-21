@@ -3,5 +3,3 @@ allennlp
 
 # Testing
 pytest
-
-networkx

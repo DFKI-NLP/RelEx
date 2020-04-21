@@ -36,8 +36,7 @@ setup(
     url="https://github.com/ChristophAlt/RelEx",
     packages=find_packages(exclude=["*.tests", "*.tests.*",
                                     "tests.*", "tests"]),
-    install_requires=["allennlp",
-                      "networkx"],
+    install_requires=["allennlp"],
     tests_require=["pytest", "mypy", "pylint", "flake8"],
     entry_points={
       "console_scripts": []
